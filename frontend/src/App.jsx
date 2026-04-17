@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
 import { Lock, User, AlertCircle, CheckCircle2, Hexagon } from 'lucide-react'
+import Marketplace from './Marketplace'
 
 function App() {
   const [rollno, setRollno] = useState('')
@@ -43,6 +44,20 @@ function App() {
     }
   }
 
+  // If user is logged in, show the marketplace full-screen
+  if (user) {
+    return (
+      <Marketplace
+        user={user}
+        onLogout={() => {
+          setUser(null)
+          setRollno('')
+          setPassword('')
+        }}
+      />
+    )
+  }
+
   return (
     <div className="login-container">
       {/* Background animated geometric elements */}
@@ -61,89 +76,54 @@ function App() {
           <p className="login-subtitle">Student Resource Portal</p>
         </div>
 
-        {user ? (
-          <div className="success-message">
-            <CheckCircle2 size={48} color="#4ade80" style={{ margin: '0 auto 16px' }} />
-            <h2 style={{ marginBottom: '8px' }}>Welcome, {user.username}!</h2>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>You have successfully logged in.</p>
-            
-            <div className="user-card">
-              <div className="user-card-item">
-                <span className="form-label">Roll Number</span>
-                <span>{user.rollno}</span>
-              </div>
-              <div className="user-card-item">
-                <span className="form-label">Username</span>
-                <span>@{user.username}</span>
-              </div>
-              <div className="user-card-item">
-                <span className="form-label">Social Credit</span>
-                <span className="credit-score">{user.social_credit}/100</span>
-              </div>
+        <form className="login-form" onSubmit={handleLogin}>
+          {error && (
+            <div className="error-message">
+              <AlertCircle size={18} />
+              <span>{error}</span>
             </div>
+          )}
 
-            <button 
-              className="submit-btn" 
-              style={{ width: '100%', marginTop: '24px' }}
-              onClick={() => {
-                setUser(null);
-                setRollno('');
-                setPassword('');
-              }}
-            >
-              Log Out
-            </button>
+          <div className="form-group">
+            <label className="form-label" htmlFor="rollno">Roll Number</label>
+            <div className="input-wrapper">
+              <User className="input-icon" size={18} />
+              <input
+                id="rollno"
+                type="text"
+                className="form-input"
+                placeholder="e.g. 160124737177"
+                value={rollno}
+                onChange={(e) => setRollno(e.target.value)}
+                required
+              />
+            </div>
           </div>
-        ) : (
-          <form className="login-form" onSubmit={handleLogin}>
-            {error && (
-              <div className="error-message">
-                <AlertCircle size={18} />
-                <span>{error}</span>
-              </div>
-            )}
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="rollno">Roll Number</label>
-              <div className="input-wrapper">
-                <User className="input-icon" size={18} />
-                <input
-                  id="rollno"
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. 160124737177"
-                  value={rollno}
-                  onChange={(e) => setRollno(e.target.value)}
-                  required
-                />
-              </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">Password</label>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
+              <input
+                id="password"
+                type="password"
+                className="form-input"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <Lock className="input-icon" size={18} />
-                <input
-                  id="password"
-                  type="password"
-                  className="form-input"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              className="submit-btn" 
-              disabled={loading}
-            >
-              {loading ? 'Authenticating...' : 'Sign In'}
-            </button>
-          </form>
-        )}
+          <button
+            type="submit"
+            className="submit-btn"
+            disabled={loading}
+          >
+            {loading ? 'Authenticating...' : 'Sign In'}
+          </button>
+        </form>
       </div>
     </div>
   )
