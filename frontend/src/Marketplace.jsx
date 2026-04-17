@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { supabase } from './supabaseClient'
 import {
   Search,
   Plus,
@@ -28,140 +29,7 @@ const CATEGORIES = [
   'Leisure Buddy System',
 ]
 
-// ─── Dummy ticket data ──────────────────────────────────────────
-const SEED_REQUESTS = [
-  {
-    id: 'REQ-001',
-    title: 'Need 2 A4 sheets urgently',
-    desc: 'Have a lab record submission in 20 min. Will return tomorrow!',
-    category: 'A4',
-    user: 'priya_22',
-    status: 'pending',
-  },
-  {
-    id: 'REQ-002',
-    title: 'USB-C to HDMI adaptor for presentation',
-    desc: 'ESE project demo in Room 304 at 2 PM. Can anyone lend one for an hour?',
-    category: 'Adaptors',
-    user: 'rahul_k',
-    status: 'claimed',
-  },
-  {
-    id: 'REQ-003',
-    title: 'Anyone have short notes for DSA?',
-    desc: 'Mid-2 prep. Digital or handwritten both fine.',
-    category: 'Short Notes',
-    user: 'aishu_07',
-    status: 'pending',
-  },
-  {
-    id: 'REQ-004',
-    title: 'Phone charger (Type-C)',
-    desc: 'Dead phone, important call expected. Library area please!',
-    category: 'Charging Equipment',
-    user: 'alex_m',
-    status: 'pending',
-  },
-  {
-    id: 'REQ-005',
-    title: 'Lab record sheets — OS subject',
-    desc: '5 plain observation sheets. Will buy you a coffee ☕',
-    category: 'Record Stuff',
-    user: 'sneha_r',
-    status: 'closed',
-  },
-  {
-    id: 'REQ-006',
-    title: 'Buddy for badminton 4 PM',
-    desc: 'Looking for a doubles partner at the court, anyone free?',
-    category: 'Leisure Buddy System',
-    user: 'vikram_s',
-    status: 'pending',
-  },
-  {
-    id: 'REQ-007',
-    title: 'Output printout — 3 pages',
-    desc: 'Java lab output, need colour print if possible.',
-    category: 'Output Printouts',
-    user: 'megha_26',
-    status: 'pending',
-  },
-  {
-    id: 'REQ-008',
-    title: 'Proxy attendance lol (jk… unless?)',
-    desc: 'Stuck in hostel with fever. DM me 🥲',
-    category: 'Attendance',
-    user: 'karan_d',
-    status: 'closed',
-  },
-]
-
-const SEED_SELLER_POSTS = [
-  {
-    id: 'SEL-001',
-    title: 'Selling 50 extra A4 sheets',
-    desc: 'Bought a ream, only used half. ₹30 for the lot, meet near canteen.',
-    category: 'A4',
-    user: 'divya_p',
-    status: 'pending',
-  },
-  {
-    id: 'SEL-002',
-    title: 'Homemade laddoos 🍬',
-    desc: 'Mom sent a huge box. ₹10 per piece, limited stock!',
-    category: 'Snacks',
-    user: 'anand_j',
-    status: 'claimed',
-  },
-  {
-    id: 'SEL-003',
-    title: 'Stationery kit — pens, pencils, ruler',
-    desc: 'Brand new Faber-Castell set. Moving out of hostel, selling cheap.',
-    category: 'Stationery',
-    user: 'meera_v',
-    status: 'pending',
-  },
-  {
-    id: 'SEL-004',
-    title: 'Water bottle (Milton 1L)',
-    desc: 'Bought two by mistake. Sealed, unused. ₹150.',
-    category: 'Water Bottle',
-    user: 'ravi_k',
-    status: 'pending',
-  },
-  {
-    id: 'SEL-005',
-    title: 'DBMS assignment solutions',
-    desc: 'Handwritten, neatly done. Will share photos for ₹20.',
-    category: 'Homework & Assignments',
-    user: 'nandini_s',
-    status: 'pending',
-  },
-  {
-    id: 'SEL-006',
-    title: 'Lightning to USB-C adapter',
-    desc: 'Works perfectly, no longer need it. ₹100.',
-    category: 'Adaptors',
-    user: 'sai_m',
-    status: 'closed',
-  },
-  {
-    id: 'SEL-007',
-    title: 'Lending my portable charger',
-    desc: '20 000 mAh Ambrane. Return by evening. DM me.',
-    category: 'Charging Equipment',
-    user: 'pooja_b',
-    status: 'pending',
-  },
-  {
-    id: 'SEL-008',
-    title: 'CN short notes — handwritten',
-    desc: '40 pages covering Units 1-4. Neat diagrams included.',
-    category: 'Short Notes',
-    user: 'arjun_22',
-    status: 'claimed',
-  },
-]
+// ─── Dummy ticket data removed since we fetch from DB ─────────────
 
 // Helpers for styling variety
 const CARD_VARIANTS = ['variant-cream', 'variant-blue', 'variant-yellow', 'variant-pink', 'variant-green']
@@ -219,6 +87,52 @@ export default function Marketplace({ user, onLogout }) {
   const [formDesc, setFormDesc]   = useState('')
   const [formCategory, setFormCategory] = useState('')
 
+  // ticket state
+  const [tickets, setTickets] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('TicketTable')
+        .select(`
+          ticketid,
+          type,
+          owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+          metadata:TicketTableData ( title, description, category, status )
+        `)
+      
+      if (error) throw error
+
+      if (data) {
+        const formattedTickets = data.map(t => {
+          const ownerObj = Array.isArray(t.owner) ? t.owner[0] : t.owner
+          const username = ownerObj ? ownerObj.username : 'unknown'
+          const meta = Array.isArray(t.metadata) ? t.metadata[0] : t.metadata || {}
+
+          return {
+            id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
+            title: meta.title || 'Untitled',
+            desc: meta.description || '',
+            category: meta.category || 'General',
+            user: username,
+            status: meta.status || 'pending',
+            type: t.type || 'request'
+          }
+        })
+        setTickets(formattedTickets.reverse())
+      }
+    } catch (err) {
+      console.error('Error fetching tickets:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTickets()
+  }, [])
+
   const closeModal = () => {
     setModalOpen(null)
     setFormTitle('')
@@ -226,9 +140,44 @@ export default function Marketplace({ user, onLogout }) {
     setFormCategory('')
   }
 
-  const handleSubmit = () => {
-    // UI-only — no backend wiring yet
-    closeModal()
+  const handleSubmit = async () => {
+    if (!formTitle || !formCategory) {
+      alert("Please fill in title and category")
+      return
+    }
+
+    try {
+      const dbType = modalOpen === 'seller' ? 'post' : 'request'
+      
+      const { data: ticketData, error: ticketError } = await supabase
+        .from('TicketTable')
+        .insert({
+          owner_rollno: user.rollno,
+          type: dbType
+        })
+        .select('ticketid')
+        .single()
+      
+      if (ticketError) throw ticketError
+
+      const { error: metaError } = await supabase
+        .from('TicketTableData')
+        .insert({
+          ticketid: ticketData.ticketid,
+          title: formTitle,
+          description: formDesc,
+          category: formCategory,
+          status: 'pending'
+        })
+      
+      if (metaError) throw metaError
+
+      closeModal()
+      fetchTickets()
+    } catch (err) {
+      console.error("Error creating ticket:", err)
+      alert("Failed to create ticket")
+    }
   }
 
   // filtering logic
@@ -248,12 +197,12 @@ export default function Marketplace({ user, onLogout }) {
   }
 
   const filteredRequests = useMemo(
-    () => filterTickets(SEED_REQUESTS),
-    [activeFilter, searchQuery]
+    () => filterTickets(tickets.filter(t => t.type === 'request')),
+    [activeFilter, searchQuery, tickets]
   )
   const filteredSeller = useMemo(
-    () => filterTickets(SEED_SELLER_POSTS),
-    [activeFilter, searchQuery]
+    () => filterTickets(tickets.filter(t => t.type === 'post')),
+    [activeFilter, searchQuery, tickets]
   )
 
   const initials = user?.username
