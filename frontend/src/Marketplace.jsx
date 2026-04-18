@@ -10,6 +10,7 @@ import {
   Package,
   Megaphone,
 } from 'lucide-react'
+import Dashboard from './Dashboard'
 import './Marketplace.css'
 
 // ─── Filter categories ──────────────────────────────────────────
@@ -80,6 +81,9 @@ export default function Marketplace({ user, onLogout }) {
   // filter / search state
   const [activeFilter, setActiveFilter] = useState('All')
   const [searchQuery, setSearchQuery]   = useState('')
+
+  // dashboard state
+  const [dashboardOpen, setDashboardOpen] = useState(false)
 
   // modal state
   const [modalOpen, setModalOpen] = useState(null) // 'request' | 'seller' | null
@@ -220,7 +224,13 @@ export default function Marketplace({ user, onLogout }) {
             <LogOut size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
             Log out
           </button>
-          <div className="mp-topbar-avatar" id="user-avatar">{initials}</div>
+          <div
+            className="mp-topbar-avatar"
+            id="user-avatar"
+            onClick={() => setDashboardOpen(true)}
+            style={{ cursor: 'pointer' }}
+            title="Open Dashboard"
+          >{initials}</div>
           <span>@{user?.username || 'anon'}</span>
         </div>
       </header>
@@ -405,6 +415,15 @@ export default function Marketplace({ user, onLogout }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Dashboard Panel ── */}
+      {dashboardOpen && (
+        <Dashboard
+          user={user}
+          onClose={() => setDashboardOpen(false)}
+          onNavigateMarketplace={() => setDashboardOpen(false)}
+        />
       )}
     </div>
   )

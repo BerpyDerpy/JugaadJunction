@@ -1,0 +1,355 @@
+/* ============================================
+   DASHBOARD – Slide-in Profile Panel
+   ============================================ */
+
+/* ---------- overlay ---------- */
+.db-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(20, 10, 5, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: flex-end;
+  animation: dbOverlayIn 0.25s ease;
+}
+
+@keyframes dbOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---------- panel ---------- */
+.db-panel {
+  width: 100%;
+  max-width: 520px;
+  height: 100vh;
+  overflow-y: auto;
+  background: #4a2e1e;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.12'/%3E%3C/svg%3E");
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
+  padding: 28px 24px 40px;
+  position: relative;
+  animation: dbSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@keyframes dbSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* scrollbar */
+.db-panel::-webkit-scrollbar { width: 6px; }
+.db-panel::-webkit-scrollbar-track { background: transparent; }
+.db-panel::-webkit-scrollbar-thumb {
+  background: rgba(245, 230, 211, 0.15);
+  border-radius: 3px;
+}
+
+/* ---------- close button ---------- */
+.db-close-btn {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 230, 211, 0.2);
+  background: rgba(245, 230, 211, 0.08);
+  color: #d4b896;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.db-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+/* ---------- user header ---------- */
+.db-user-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: rgba(245, 230, 211, 0.06);
+  border: 1.5px solid rgba(245, 230, 211, 0.12);
+  border-radius: 16px;
+  margin-top: 24px;
+}
+
+.db-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+  flex-shrink: 0;
+}
+
+.db-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.db-username {
+  font-family: 'Caveat', cursive;
+  font-size: 26px;
+  font-weight: 700;
+  color: #f5e6d3;
+  line-height: 1.2;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.db-rollno {
+  font-size: 13px;
+  color: #a38568;
+  font-weight: 500;
+}
+
+/* ---------- credit score wheel ---------- */
+.db-credit-wheel {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.db-credit-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.db-credit-arc {
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.4s ease;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.db-credit-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.db-credit-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f5e6d3;
+  line-height: 1;
+}
+
+.db-credit-label {
+  font-size: 9px;
+  color: #a38568;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ---------- quick nav row ---------- */
+.db-nav-row {
+  display: flex;
+  gap: 10px;
+}
+
+.db-nav-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(245, 230, 211, 0.15);
+  background: rgba(245, 230, 211, 0.06);
+  color: #e8d5be;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.db-nav-btn:hover {
+  background: rgba(217, 119, 6, 0.15);
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #fbbf24;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.db-nav-btn:active {
+  transform: translateY(0);
+}
+
+/* ---------- tabs ---------- */
+.db-tabs {
+  display: flex;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid rgba(245, 230, 211, 0.12);
+  background: rgba(245, 230, 211, 0.04);
+}
+
+.db-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border: none;
+  background: transparent;
+  color: #a38568;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.db-tab:first-child {
+  border-right: 1px solid rgba(245, 230, 211, 0.1);
+}
+
+.db-tab:hover {
+  background: rgba(245, 230, 211, 0.06);
+  color: #d4b896;
+}
+
+.db-tab.active {
+  background: rgba(217, 119, 6, 0.18);
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.db-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #d97706;
+}
+
+/* ---------- ticket list area ---------- */
+.db-tickets {
+  flex: 1;
+  min-height: 200px;
+}
+
+.db-ticket-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Make ticket cards full-width inside dashboard */
+.db-ticket-grid .mp-ticket {
+  transform: rotate(0deg) !important;
+}
+
+.db-ticket-grid .mp-ticket:hover {
+  transform: translateY(-3px) scale(1.01) !important;
+}
+
+/* ---------- empty state ---------- */
+.db-empty {
+  text-align: center;
+  padding: 50px 20px;
+  color: #a38568;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 17px;
+}
+
+.db-empty-icon {
+  font-size: 48px;
+  margin-bottom: 14px;
+  animation: gentleBounce 2s infinite ease-in-out;
+}
+
+@keyframes gentleBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ---------- loading state ---------- */
+.db-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 50px 20px;
+  color: #a38568;
+  font-size: 15px;
+}
+
+.db-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(245, 230, 211, 0.1);
+  border-top-color: #d97706;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 540px) {
+  .db-panel {
+    max-width: 100%;
+    padding: 20px 16px 32px;
+  }
+
+  .db-user-header {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .db-user-info {
+    text-align: center;
+  }
+
+  .db-credit-wheel {
+    width: 70px;
+    height: 70px;
+  }
+
+  .db-nav-btn {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}
