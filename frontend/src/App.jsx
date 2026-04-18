@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import { Lock, User, AlertCircle, CheckCircle2, Hexagon } from 'lucide-react'
 import Marketplace from './Marketplace'
@@ -8,7 +8,16 @@ function App() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [user, setUser] = useState(null)
+
+  // ── Restore session from localStorage ──────────────────────────
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jj_user')
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -34,6 +43,7 @@ function App() {
       // Note: Storing plain passwords ain't secure, but keeping it simple as per schema!
       if (data && data.password === password) {
         setUser(data)
+        localStorage.setItem('jj_user', JSON.stringify(data))
       } else {
         throw new Error('Invalid roll number or password.')
       }
@@ -53,6 +63,7 @@ function App() {
           setUser(null)
           setRollno('')
           setPassword('')
+          localStorage.removeItem('jj_user')
         }}
       />
     )

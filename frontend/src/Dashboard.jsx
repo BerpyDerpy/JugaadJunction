@@ -6,17 +6,20 @@ import {
   ShoppingBag,
   Package,
   Megaphone,
-  ArrowLeft,
+  Hand,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react'
 import './Dashboard.css'
 
 // ── Card styling helpers (same as Marketplace) ─────────────────
 const CARD_VARIANTS = ['variant-cream', 'variant-blue', 'variant-yellow', 'variant-pink', 'variant-green']
-const PIN_COLORS   = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orange']
+const PIN_COLORS = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orange']
 function pick(arr, i) { return arr[i % arr.length] }
 
 // ── Credit Score Wheel ─────────────────────────────────────────
 function CreditWheel({ score, max = 100 }) {
+  ``
   const radius = 38
   const stroke = 7
   const circumference = 2 * Math.PI * radius
@@ -59,15 +62,16 @@ function CreditWheel({ score, max = 100 }) {
 }
 
 // ── Ticket Card (matches Marketplace exactly) ──────────────────
-function DashTicketCard({ ticket, index, type }) {
-  const showTape  = index % 4 === 1
+function DashTicketCard({ ticket, index, type, onClick }) {
+  const showTape = index % 4 === 1
   const showStain = index % 5 === 3
 
   return (
     <div
-      className={`mp-ticket ${pick(CARD_VARIANTS, index)}`}
+      className={`mp-ticket ${pick(CARD_VARIANTS, index)} mp-ticket-clickable`}
       style={{ animationDelay: `${index * 0.06}s` }}
       id={`dash-ticket-${ticket.id}`}
+      onClick={() => onClick && onClick(ticket)}
     >
       <div className={`mp-pin ${pick(PIN_COLORS, index)}`} />
       {showTape && <div className={`mp-tape ${index % 2 === 0 ? '' : 'tape-left'}`} />}
@@ -99,6 +103,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posted') // 'posted' | 'requested'
+  const [selectedTicket, setSelectedTicket] = useState(null)
 
   useEffect(() => {
     fetchUserTickets()
@@ -112,6 +117,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           ticketid,
           type,
           owner_rollno,
+          claimant_rollno,
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           metadata:TicketTableData ( title, description, category, status )
         `)
@@ -127,10 +133,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
 
           return {
             id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
+            ticketid: t.ticketid,
             title: meta.title || 'Untitled',
             desc: meta.description || '',
             category: meta.category || 'General',
             user: username,
+            ownerRollno: t.owner_rollno,
+            claimantRollno: t.claimant_rollno,
             status: meta.status || 'pending',
             type: t.type || 'request',
           }
@@ -157,6 +166,8 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : '??'
+
+  const isClaimed = selectedTicket?.status === 'claimed'
 
   return (
     <div className="db-overlay" id="dashboard-overlay" onClick={onClose}>
@@ -204,7 +215,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             id="tab-posted"
           >
             <Package size={16} />
-            Posted ({posted.length})
+            Your Offers ({posted.length})
           </button>
           <button
             className={`db-tab ${activeTab === 'requested' ? 'active' : ''}`}
@@ -231,6 +242,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   ticket={t}
                   index={i}
                   type={t.type}
+                  onClick={setSelectedTicket}
                 />
               ))}
             </div>
@@ -248,6 +260,84 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           )}
         </div>
       </div>
+
+      {/* ── Ticket Detail Popup (inside Dashboard overlay) ── */}
+      {selectedTicket && (
+        <div
+          className="mp-modal-overlay"
+          onClick={() => setSelectedTicket(null)}
+          id="dash-ticket-detail-overlay"
+          style={{ zIndex: 400 }}
+        >
+          <div
+            className={`mp-detail-popup ${isClaimed ? 'detail-claimed' : ''}`}
+            onClick={(e) => e.stopPropagation()}
+            id="dash-ticket-detail-card"
+          >
+            <div className="mp-detail-pin" />
+
+            <button
+              className="mp-modal-close mp-detail-close"
+              onClick={() => setSelectedTicket(null)}
+              id="dash-ticket-detail-close"
+            >
+              <X size={16} />
+            </button>
+
+            <span className={`mp-detail-type-badge ${selectedTicket.type === 'request' ? 'request-type' : 'seller-type'}`}>
+              {selectedTicket.type === 'request' ? 'Request' : 'Offer'}
+            </span>
+
+            <div className="mp-detail-header">
+              <div className="mp-detail-id">{selectedTicket.id}</div>
+              <h2 className="mp-detail-title">{selectedTicket.title}</h2>
+            </div>
+
+            <p className="mp-detail-desc">{selectedTicket.desc || 'No description provided.'}</p>
+
+            <div className="mp-detail-meta">
+              <span className="mp-detail-category">{selectedTicket.category}</span>
+              <span className={`mp-status ${selectedTicket.status}`}>{selectedTicket.status}</span>
+            </div>
+
+            <div className="mp-detail-divider" />
+
+            <div className="mp-detail-user-row">
+              <span className="mp-ticket-user-dot" />
+              <span className="mp-detail-posted-by">
+                Posted by <strong>@{selectedTicket.user}</strong>
+              </span>
+            </div>
+
+            {isClaimed && (
+              <div className="mp-detail-claimed-banner">
+                <CheckCircle2 size={20} className="mp-detail-claimed-icon" />
+                <div className="mp-detail-claimed-text">
+                  <strong>This ticket has been claimed!</strong>
+                  <span className="mp-detail-claimed-sub">
+                    Someone has claimed your ticket. Connect with them!
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="mp-detail-actions">
+              {!isClaimed && (
+                <div className="mp-detail-owner-note">
+                  <AlertTriangle size={16} />
+                  <span>This is your ticket — waiting for someone to claim it.</span>
+                </div>
+              )}
+              {isClaimed && (
+                <div className="mp-detail-owner-note success">
+                  <CheckCircle2 size={16} />
+                  <span>Your ticket has been claimed! Connect with the claimant.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

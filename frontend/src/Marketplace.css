@@ -774,3 +774,409 @@
   border-color: rgba(239, 68, 68, 0.35);
   color: #fca5a5;
 }
+
+/* ---------- clickable ticket card ---------- */
+.mp-ticket-clickable {
+  cursor: pointer;
+}
+
+/* ============================================
+   TICKET DETAIL POPUP
+   ============================================ */
+
+.mp-detail-popup {
+  width: 100%;
+  max-width: 520px;
+  background: #faf3e8;
+  border-radius: 10px;
+  padding: 0;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    inset 0 0 50px rgba(200, 180, 150, 0.08);
+  animation: detailPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes detailPopIn {
+  from { opacity: 0; transform: translateY(40px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* decorative pin */
+.mp-detail-pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffa726, #e65100);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  z-index: 3;
+}
+
+.mp-detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+}
+
+/* type badge */
+.mp-detail-type-badge {
+  display: inline-block;
+  margin: 28px 28px 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+/* header */
+.mp-detail-header {
+  padding: 12px 28px 0;
+}
+
+.mp-detail-id {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 13px;
+  color: #8b7355;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+.mp-detail-title {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 26px;
+  font-weight: 700;
+  color: #2c1e10;
+  line-height: 1.3;
+  margin: 0;
+}
+
+/* description */
+.mp-detail-desc {
+  padding: 12px 28px 0;
+  font-size: 14px;
+  color: #6b5540;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* metadata row */
+.mp-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 0;
+}
+
+.mp-detail-category {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(180, 130, 70, 0.15);
+  color: #8b6914;
+  border: 1px solid rgba(180, 130, 70, 0.25);
+}
+
+/* divider */
+.mp-detail-divider {
+  margin: 18px 28px;
+  border: none;
+  border-top: 1.5px dashed rgba(139, 115, 85, 0.25);
+}
+
+/* posted by */
+.mp-detail-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 28px;
+  margin-bottom: 16px;
+}
+
+.mp-detail-posted-by {
+  font-size: 14px;
+  color: #6b5540;
+}
+
+.mp-detail-posted-by strong {
+  color: #3a2a1a;
+}
+
+/* ── claimed banner ── */
+.mp-detail-claimed-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 28px 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1.5px solid rgba(34, 197, 94, 0.3);
+  animation: bannerFadeIn 0.4s ease;
+}
+
+@keyframes bannerFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mp-detail-claimed-icon {
+  color: #16a34a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mp-detail-claimed-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mp-detail-claimed-text strong {
+  font-size: 14px;
+  color: #166534;
+}
+
+.mp-detail-claimed-sub {
+  font-size: 13px;
+  color: #4ade80;
+}
+
+/* ── bargain section ── */
+.mp-detail-bargain {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 28px 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1.5px solid rgba(234, 179, 8, 0.3);
+  animation: bannerFadeIn 0.5s ease;
+}
+
+.mp-detail-bargain-icon {
+  color: #ca8a04;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mp-detail-bargain-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mp-detail-bargain-text strong {
+  font-size: 14px;
+  color: #854d0e;
+}
+
+.mp-detail-bargain-text span {
+  font-size: 13px;
+  color: #a16207;
+}
+
+/* ── action area ── */
+.mp-detail-actions {
+  padding: 4px 28px 28px;
+}
+
+.mp-detail-claim-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.35);
+}
+
+.mp-detail-claim-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.45);
+}
+
+.mp-detail-claim-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mp-detail-claim-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.mp-detail-btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* owner notes */
+.mp-detail-owner-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(139, 115, 85, 0.1);
+  border: 1.5px solid rgba(139, 115, 85, 0.2);
+  color: #8b7355;
+  font-size: 14px;
+}
+
+.mp-detail-owner-note.success {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #166534;
+}
+
+/* ── closed banner ── */
+.mp-detail-closed-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 28px 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(107, 114, 128, 0.1);
+  border: 1.5px solid rgba(107, 114, 128, 0.3);
+  animation: bannerFadeIn 0.4s ease;
+}
+
+.mp-detail-closed-icon {
+  color: #6b7280;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mp-detail-closed-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mp-detail-closed-text strong {
+  font-size: 14px;
+  color: #374151;
+}
+
+.mp-detail-closed-sub {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* closed-state popup tint */
+.mp-detail-popup.detail-closed {
+  background: #f5f5f5;
+}
+
+/* ── owner claimed actions stack ── */
+.mp-detail-owner-claimed-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── close ticket button ── */
+.mp-detail-close-ticket-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(75, 85, 99, 0.3);
+}
+
+.mp-detail-close-ticket-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+  transform: translateY(-2px);
+}
+
+.mp-detail-close-ticket-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mp-detail-close-ticket-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── detail popup responsive ── */
+@media (max-width: 540px) {
+  .mp-detail-popup {
+    max-width: 100%;
+    margin: 0 8px;
+  }
+
+  .mp-detail-header,
+  .mp-detail-desc,
+  .mp-detail-meta,
+  .mp-detail-user-row,
+  .mp-detail-actions {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .mp-detail-divider {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+
+  .mp-detail-claimed-banner,
+  .mp-detail-bargain {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+
+  .mp-detail-type-badge {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+
+  .mp-detail-title {
+    font-size: 22px;
+  }
+}
