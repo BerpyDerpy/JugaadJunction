@@ -16,6 +16,7 @@ import {
   Lock,
 } from 'lucide-react'
 import Dashboard from './Dashboard'
+import { usePushNotifications } from './usePushNotifications'
 import './Marketplace.css'
 
 // ─── Filter categories ──────────────────────────────────────────
@@ -84,6 +85,9 @@ function TicketCard({ ticket, index, type, onClick }) {
 
 // ─── Marketplace ────────────────────────────────────────────────
 export default function Marketplace({ user, onLogout }) {
+  // Setup push notifications based on user
+  usePushNotifications(user?.rollno)
+
   // filter / search state
   const [activeFilter, setActiveFilter] = useState('All')
   const [searchQuery, setSearchQuery]   = useState('')
