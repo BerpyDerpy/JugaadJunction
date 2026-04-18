@@ -8,6 +8,7 @@ function App() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isSignUp, setIsSignUp] = useState(false)
 
   // ── Restore session from localStorage ──────────────────────────
   const [user, setUser] = useState(() => {
@@ -19,33 +20,59 @@ function App() {
     }
   })
 
-  const handleLogin = async (e) => {
+  const handleAuth = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     try {
-      // In a real app we'd use Supabase Auth, but per requirements we're
-      // using the UserTable for our credentials.
-      const { data, error: dbError } = await supabase
-        .from('UserTable')
-        .select('*')
-        .eq('rollno', rollno)
-        .single()
+      if (isSignUp) {
+        // Sign up flow
+        const username = 'Student_' + rollno; // Auto-generate username as it is NOT NULL in DB
+        const newUser = {
+          rollno,
+          password,
+          username,
+          social_credit: 100
+        }
 
-      if (dbError) {
-        if (dbError.code === 'PGRST116') {
+        const { data, error: insertError } = await supabase
+          .from('UserTable')
+          .insert([newUser])
+          .select()
+          .single()
+
+        if (insertError) {
+          if (insertError.code === '23505') {
+            throw new Error('User already exists with this roll number. Please sign in.')
+          }
+          throw new Error(insertError.message || 'Failed to create account.')
+        }
+
+        setUser(data || newUser)
+        localStorage.setItem('jj_user', JSON.stringify(data || newUser))
+      } else {
+        // Login flow
+        const { data, error: dbError } = await supabase
+          .from('UserTable')
+          .select('*')
+          .eq('rollno', rollno)
+          .single()
+
+        if (dbError) {
+          if (dbError.code === 'PGRST116') {
+            throw new Error('Invalid roll number or password.')
+          }
+          throw new Error('Database error. Did you run the SQL seed in Supabase?')
+        }
+
+        // Note: Storing plain passwords ain't secure, but keeping it simple as per schema!
+        if (data && data.password === password) {
+          setUser(data)
+          localStorage.setItem('jj_user', JSON.stringify(data))
+        } else {
           throw new Error('Invalid roll number or password.')
         }
-        throw new Error('Database error. Did you run the SQL seed in Supabase?')
-      }
-
-      // Note: Storing plain passwords ain't secure, but keeping it simple as per schema!
-      if (data && data.password === password) {
-        setUser(data)
-        localStorage.setItem('jj_user', JSON.stringify(data))
-      } else {
-        throw new Error('Invalid roll number or password.')
       }
     } catch (err) {
       setError(err.message)
@@ -87,7 +114,7 @@ function App() {
           <p className="login-subtitle">Student Resource Portal</p>
         </div>
 
-        <form className="login-form" onSubmit={handleLogin}>
+        <form className="login-form" onSubmit={handleAuth}>
           {error && (
             <div className="error-message">
               <AlertCircle size={18} />
@@ -106,6 +133,12 @@ function App() {
                 placeholder="e.g. 160124737177"
                 value={rollno}
                 onChange={(e) => setRollno(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('password')?.focus();
+                  }
+                }}
                 required
               />
             </div>
@@ -122,6 +155,7 @@ function App() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAuth(e)}
                 required
               />
             </div>
@@ -132,8 +166,14 @@ function App() {
             className="submit-btn"
             disabled={loading}
           >
-            {loading ? 'Authenticating...' : 'Sign In'}
+            {loading ? 'Authenticating...' : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>
+
+          <div className="auth-toggle">
+            <span onClick={() => setIsSignUp(!isSignUp)}>
+              {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+            </span>
+          </div>
         </form>
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
   Hand,
   CheckCircle2,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react'
 import './Dashboard.css'
 
@@ -104,10 +105,27 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posted') // 'posted' | 'requested'
   const [selectedTicket, setSelectedTicket] = useState(null)
+  const [socialCredit, setSocialCredit] = useState(user?.social_credit ?? 75)
 
   useEffect(() => {
     fetchUserTickets()
+    fetchSocialCredit()
   }, [])
+
+  const fetchSocialCredit = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('UserTable')
+        .select('social_credit')
+        .eq('rollno', user.rollno)
+        .single()
+      if (!error && data) {
+        setSocialCredit(data.social_credit)
+      }
+    } catch (err) {
+      console.error('Error fetching social credit:', err)
+    }
+  }
 
   const fetchUserTickets = async () => {
     try {
@@ -119,9 +137,10 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           owner_rollno,
           claimant_rollno,
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+          claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
           metadata:TicketTableData ( title, description, category, status )
         `)
-        .eq('owner_rollno', user.rollno)
+        .or(`owner_rollno.eq.${user.rollno},claimant_rollno.eq.${user.rollno}`)
 
       if (error) throw error
 
@@ -154,20 +173,54 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   }
 
   const posted = useMemo(
-    () => tickets.filter(t => t.type === 'post'),
-    [tickets]
+    () => tickets.filter(t => t.type === 'post' && t.ownerRollno === user.rollno),
+    [tickets, user.rollno]
   )
   const requested = useMemo(
-    () => tickets.filter(t => t.type === 'request'),
-    [tickets]
+    () => tickets.filter(t => t.type === 'request' && t.ownerRollno === user.rollno),
+    [tickets, user.rollno]
+  )
+  const claimed = useMemo(
+    () => tickets.filter(t => t.claimantRollno === user.rollno && t.ownerRollno !== user.rollno),
+    [tickets, user.rollno]
   )
 
-  const activeList = activeTab === 'posted' ? posted : requested
+  const activeList = activeTab === 'posted' ? posted : activeTab === 'requested' ? requested : claimed
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : '??'
 
   const isClaimed = selectedTicket?.status === 'claimed'
+  const isOwner = selectedTicket?.ownerRollno === user.rollno
+
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async (ticket) => {
+    if (!window.confirm("Are you sure you want to delete this ticket FOREVER?")) return;
+    if (deleting) return
+    setDeleting(true)
+    try {
+      const { error: metaError } = await supabase
+        .from('TicketTableData')
+        .delete()
+        .eq('ticketid', ticket.ticketid)
+      if (metaError) throw metaError
+
+      const { error: ticketError } = await supabase
+        .from('TicketTable')
+        .delete()
+        .eq('ticketid', ticket.ticketid)
+      if (ticketError) throw ticketError
+
+      setSelectedTicket(null)
+      await fetchUserTickets()
+    } catch (err) {
+      console.error('Error deleting ticket:', err)
+      alert('Failed to delete ticket')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div className="db-overlay" id="dashboard-overlay" onClick={onClose}>
@@ -184,7 +237,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             <h2 className="db-username">@{user?.username || 'anon'}</h2>
             <span className="db-rollno">{user?.rollno}</span>
           </div>
-          <CreditWheel score={user?.credit_score ?? 75} />
+          <CreditWheel score={socialCredit} />
         </div>
 
         {/* ── Quick Nav Buttons ── */}
@@ -215,7 +268,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             id="tab-posted"
           >
             <Package size={16} />
-            Your Offers ({posted.length})
+            Offers ({posted.length})
           </button>
           <button
             className={`db-tab ${activeTab === 'requested' ? 'active' : ''}`}
@@ -224,6 +277,14 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           >
             <Megaphone size={16} />
             Requested ({requested.length})
+          </button>
+          <button
+            className={`db-tab ${activeTab === 'claimed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('claimed')}
+            id="tab-claimed"
+          >
+            <Hand size={16} />
+            Claimed ({claimed.length})
           </button>
         </div>
 
@@ -249,12 +310,14 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           ) : (
             <div className="db-empty">
               <div className="db-empty-icon">
-                {activeTab === 'posted' ? '📦' : '📣'}
+                {activeTab === 'posted' ? '📦' : activeTab === 'requested' ? '📣' : '🤝'}
               </div>
               <p>
                 {activeTab === 'posted'
                   ? "You haven't posted any offers yet."
-                  : "You haven't made any requests yet."}
+                  : activeTab === 'requested'
+                  ? "You haven't made any requests yet."
+                  : "You haven't claimed any tickets yet."}
               </p>
             </div>
           )}
@@ -315,7 +378,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                 <div className="mp-detail-claimed-text">
                   <strong>This ticket has been claimed!</strong>
                   <span className="mp-detail-claimed-sub">
-                    Someone has claimed your ticket. Connect with them!
+                    {selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno
+                      ? "You have claimed this ticket!"
+                      : "Someone has claimed your ticket. Connect with them!"}
                   </span>
                 </div>
               </div>
@@ -331,8 +396,34 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
               {isClaimed && (
                 <div className="mp-detail-owner-note success">
                   <CheckCircle2 size={16} />
-                  <span>Your ticket has been claimed! Connect with the claimant.</span>
+                  <span>
+                    {selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno
+                      ? `You claimed this ticket! Reach out to @${selectedTicket.user} to finalize.`
+                      : "Your ticket has been claimed! Connect with the claimant."}
+                  </span>
                 </div>
+              )}
+
+              {isOwner && (
+                <button
+                  className="mp-detail-claim-btn"
+                  onClick={() => handleDelete(selectedTicket)}
+                  disabled={deleting}
+                  id="dash-delete-ticket-btn"
+                  style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', marginTop: '12px', width: '100%', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '15px', fontWeight: '500' }}
+                >
+                  {deleting ? (
+                    <>
+                      <div className="mp-detail-btn-spinner" />
+                      Deleting…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={18} />
+                      Delete Ticket Forever
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>

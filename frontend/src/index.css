@@ -298,3 +298,20 @@ body {
   font-weight: 700;
   color: #38bdf8;
 }
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.auth-toggle span {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.auth-toggle span:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}

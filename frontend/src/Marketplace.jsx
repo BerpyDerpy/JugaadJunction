@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   XCircle,
   Lock,
+  Trash2,
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import { usePushNotifications } from './usePushNotifications'
@@ -276,6 +277,36 @@ export default function Marketplace({ user, onLogout }) {
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : '??'
+
+  // ─── Delete ticket handler ──────────────────────────────────────
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async (ticket) => {
+    if (!window.confirm("Are you sure you want to delete this ticket FOREVER?")) return;
+    if (deleting) return
+    setDeleting(true)
+    try {
+      const { error: metaError } = await supabase
+        .from('TicketTableData')
+        .delete()
+        .eq('ticketid', ticket.ticketid)
+      if (metaError) throw metaError
+
+      const { error: ticketError } = await supabase
+        .from('TicketTable')
+        .delete()
+        .eq('ticketid', ticket.ticketid)
+      if (ticketError) throw ticketError
+
+      setSelectedTicket(null)
+      await fetchTickets()
+    } catch (err) {
+      console.error('Error deleting ticket:', err)
+      alert('Failed to delete ticket')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // ─── Close ticket handler ──────────────────────────────────────
   const [closing, setClosing] = useState(false)
@@ -679,6 +710,28 @@ export default function Marketplace({ user, onLogout }) {
                   <Lock size={16} />
                   <span>This ticket has been closed by the owner.</span>
                 </div>
+              )}
+
+              {isOwner && (
+                <button
+                  className="mp-detail-claim-btn"
+                  onClick={() => handleDelete(selectedTicket)}
+                  disabled={deleting}
+                  id="delete-ticket-btn"
+                  style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', marginTop: '12px' }}
+                >
+                  {deleting ? (
+                    <>
+                      <div className="mp-detail-btn-spinner" />
+                      Deleting…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={18} />
+                      Delete Ticket Forever
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>
