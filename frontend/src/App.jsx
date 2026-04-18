@@ -1,14 +1,128 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
-import { Lock, User, AlertCircle, CheckCircle2, Hexagon } from 'lucide-react'
+import { Lock, User, AlertCircle, Hexagon, Sparkles, PartyPopper } from 'lucide-react'
+import confetti from 'canvas-confetti'
+import { generateDisgustingNickname } from './nicknameGenerator'
 import Marketplace from './Marketplace'
 
+// ─── Welcome Reveal Screen ─────────────────────────────────────
+function WelcomeReveal({ realName, nickname, onContinue }) {
+  const containerRef = useRef(null)
+  const [phase, setPhase] = useState(0) // 0=name, 1=nickname, 2=notice, 3=button
+
+  useEffect(() => {
+    // Stagger the reveals
+    const t1 = setTimeout(() => setPhase(1), 800)
+    const t2 = setTimeout(() => {
+      setPhase(2)
+      // CONFETTI EXPLOSION 🎉
+      const duration = 3000
+      const end = Date.now() + duration
+
+      const frame = () => {
+        confetti({
+          particleCount: 4,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.7 },
+          colors: ['#a855f7', '#ec4899', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'],
+          gravity: 0.8,
+        })
+        confetti({
+          particleCount: 4,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.7 },
+          colors: ['#a855f7', '#ec4899', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'],
+          gravity: 0.8,
+        })
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame)
+        }
+      }
+      frame()
+
+      // Big center burst
+      confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { x: 0.5, y: 0.5 },
+        colors: ['#a855f7', '#ec4899', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'],
+        startVelocity: 45,
+        gravity: 1.2,
+        ticks: 200,
+        scalar: 1.2,
+      })
+    }, 2000)
+    const t3 = setTimeout(() => setPhase(3), 3200)
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  }, [])
+
+  return (
+    <div className="welcome-reveal" ref={containerRef} id="welcome-reveal">
+      {/* Drifting blobby background */}
+      <div className="welcome-blobs">
+        <div className="welcome-blob blob-1" />
+        <div className="welcome-blob blob-2" />
+        <div className="welcome-blob blob-3" />
+      </div>
+
+      <div className="welcome-content">
+        {/* Phase 0: Real name */}
+        <div className={`welcome-line welcome-greeting ${phase >= 0 ? 'visible' : ''}`}>
+          <span className="welcome-emoji">👋</span>
+          <span>Welcome, {realName}</span>
+        </div>
+
+        <div className={`welcome-line welcome-real-name ${phase >= 0 ? 'visible' : ''}`}>
+          {realName}
+        </div>
+
+        {/* Phase 1: Nickname reveal */}
+        <div className={`welcome-divider ${phase >= 1 ? 'visible' : ''}`} />
+
+        <div className={`welcome-line welcome-identity-label ${phase >= 1 ? 'visible' : ''}`}>
+          <Sparkles size={18} className="welcome-sparkle" />
+          Your new identity is
+        </div>
+
+        <div className={`welcome-line welcome-nickname ${phase >= 1 ? 'visible' : ''}`}>
+          {nickname}
+        </div>
+
+        {/* Phase 2: The notice */}
+        <div className={`welcome-notice ${phase >= 2 ? 'visible' : ''}`}>
+          <span className="welcome-notice-icon">⚠️</span>
+          <span>You cannot change this btw</span>
+        </div>
+
+        {/* Phase 3: Continue button */}
+        <button
+          className={`welcome-continue-btn ${phase >= 3 ? 'visible' : ''}`}
+          onClick={onContinue}
+          id="welcome-continue-btn"
+        >
+          <PartyPopper size={20} />
+          Enter the Bazaar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main App ───────────────────────────────────────────────────
 function App() {
   const [rollno, setRollno] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isSignUp, setIsSignUp] = useState(false)
+
+  // Welcome reveal state
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [welcomeData, setWelcomeData] = useState(null) // { realName, nickname, userData }
 
   // ── Restore session from localStorage ──────────────────────────
   const [user, setUser] = useState(() => {
@@ -27,13 +141,38 @@ function App() {
 
     try {
       if (isSignUp) {
-        // Sign up flow
-        const username = 'Student_' + rollno; // Auto-generate username as it is NOT NULL in DB
+        // ── SIGN UP FLOW ───────────────────────────────────────
+        const trimmedRollno = rollno.trim()
+
+        // 1. Fetch real name from StudentNames table
+        const { data: studentData, error: studentError } = await supabase
+          .from('StudentNames')
+          .select('first_name')
+          .eq('rollno', trimmedRollno)
+          .single()
+
+        // Debug: log the raw supabase response
+        console.log('[Signup] rollno sent:', JSON.stringify(trimmedRollno))
+        console.log('[Signup] studentData:', studentData)
+        console.log('[Signup] studentError:', studentError)
+
+        if (studentError || !studentData) {
+          throw new Error(
+            'Roll number not found in student registry. Are you sure you belong here? 🤨'
+          )
+        }
+
+        const realName = studentData.first_name
+
+        // 2. Generate the disgusting nickname
+        const nickname = generateDisgustingNickname(realName)
+
+        // 3. Create the user in UserTable
         const newUser = {
-          rollno,
+          rollno: trimmedRollno,
           password,
-          username,
-          social_credit: 100
+          username: nickname,
+          social_credit: 100,
         }
 
         const { data, error: insertError } = await supabase
@@ -44,15 +183,20 @@ function App() {
 
         if (insertError) {
           if (insertError.code === '23505') {
-            throw new Error('User already exists with this roll number. Please sign in.')
+            throw new Error(
+              'This roll number already has an account. What are you trying to pull? Sign in instead.'
+            )
           }
           throw new Error(insertError.message || 'Failed to create account.')
         }
 
-        setUser(data || newUser)
-        localStorage.setItem('jj_user', JSON.stringify(data || newUser))
+        const userData = data || newUser
+
+        // 4. Show the welcome reveal instead of going directly to marketplace
+        setWelcomeData({ realName, nickname, userData })
+        setShowWelcome(true)
       } else {
-        // Login flow
+        // ── LOGIN FLOW ─────────────────────────────────────────
         const { data, error: dbError } = await supabase
           .from('UserTable')
           .select('*')
@@ -79,6 +223,27 @@ function App() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle "continue" from welcome reveal
+  const handleWelcomeContinue = () => {
+    if (welcomeData) {
+      setUser(welcomeData.userData)
+      localStorage.setItem('jj_user', JSON.stringify(welcomeData.userData))
+      setShowWelcome(false)
+      setWelcomeData(null)
+    }
+  }
+
+  // If showing welcome reveal
+  if (showWelcome && welcomeData) {
+    return (
+      <WelcomeReveal
+        realName={welcomeData.realName}
+        nickname={welcomeData.nickname}
+        onContinue={handleWelcomeContinue}
+      />
+    )
   }
 
   // If user is logged in, show the marketplace full-screen
@@ -166,12 +331,21 @@ function App() {
             className="submit-btn"
             disabled={loading}
           >
-            {loading ? 'Authenticating...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+            {loading ? (
+              <span className="btn-loading">
+                <span className="btn-spinner" />
+                {isSignUp ? 'Generating your fate...' : 'Authenticating...'}
+              </span>
+            ) : (
+              isSignUp ? '🎲 Roll the Dice (Sign Up)' : 'Sign In'
+            )}
           </button>
 
           <div className="auth-toggle">
-            <span onClick={() => setIsSignUp(!isSignUp)}>
-              {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+            <span onClick={() => { setIsSignUp(!isSignUp); setError(null) }}>
+              {isSignUp
+                ? "Already cursed with a name? Sign in"
+                : "Fresh meat? Sign up for a name you can't escape"}
             </span>
           </div>
         </form>

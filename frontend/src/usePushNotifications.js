@@ -22,6 +22,14 @@ export function usePushNotifications(rollno) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Push subscriptions require HTTPS. Skip silently on plain HTTP (local dev).
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      return;
+    }
+
+    // Only attempt if the user is logged in and the browser supports push
+    if (!rollno) return;
+
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       setIsSupported(true);
       registerAndSubscribe();
@@ -36,6 +44,9 @@ export function usePushNotifications(rollno) {
         registration = await navigator.serviceWorker.register('/sw.js');
       }
 
+      // Wait for the SW to be active before using pushManager
+      await navigator.serviceWorker.ready;
+
       // Automatically request permission if not granted
       let permission = Notification.permission;
       if (permission === 'default') {
@@ -48,19 +59,22 @@ export function usePushNotifications(rollno) {
         return;
       }
 
+      // Use the active registration from serviceWorker.ready
+      const activeRegistration = await navigator.serviceWorker.ready;
+
       // Check current subscription
-      let sub = await registration.pushManager.getSubscription();
+      let sub = await activeRegistration.pushManager.getSubscription();
       
       const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
       
       if (!sub) {
         if (!publicVapidKey) {
-          console.error("VITE_VAPID_PUBLIC_KEY is not defined in .env");
+          console.warn("VITE_VAPID_PUBLIC_KEY is not defined — push notifications disabled.");
           return;
         }
 
         // Create new subscription
-        sub = await registration.pushManager.subscribe({
+        sub = await activeRegistration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
         });
@@ -68,7 +82,7 @@ export function usePushNotifications(rollno) {
 
       setSubscription(sub);
       
-      // Upsert subscription to Supabase if we have a rollno
+      // Upsert subscription to Supabase
       if (rollno && sub) {
         const { error: dbError } = await supabase
           .from('push_subscriptions')
@@ -79,12 +93,17 @@ export function usePushNotifications(rollno) {
 
         if (dbError) {
           console.error("Supabase upsert error:", dbError);
-          setError(dbError.message);
+          // Non-fatal — don't surface this to the user
         }
       }
 
     } catch (err) {
-      console.error('Push registration error:', err);
+      if (err.name === 'AbortError') {
+        // Push service unavailable (no HTTPS, network issue, or browser restriction on localhost)
+        console.warn('Push notifications unavailable in this environment:', err.message);
+      } else {
+        console.error('Push registration error:', err);
+      }
       setError(err.message);
     }
   };

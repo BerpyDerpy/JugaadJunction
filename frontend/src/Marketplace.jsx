@@ -48,7 +48,7 @@ function pick(arr, i) {
 }
 
 // ─── TicketCard ─────────────────────────────────────────────────
-function TicketCard({ ticket, index, type, onClick }) {
+function TicketCard({ ticket, index, type, onClick, studentNames }) {
   const showTape  = index % 4 === 1
   const showStain = index % 5 === 3
 
@@ -69,14 +69,20 @@ function TicketCard({ ticket, index, type, onClick }) {
 
       <div className="mp-ticket-id">{ticket.id}</div>
       <div className="mp-ticket-title">{ticket.title}</div>
+      
+      {ticket.price > 0 && (
+        <span className="mp-ticket-price">₹{ticket.price}</span>
+      )}
+
       <div className="mp-ticket-desc">{ticket.desc}</div>
 
       <span className="mp-ticket-category">{ticket.category}</span>
 
       <div className="mp-ticket-footer">
-        <span className="mp-ticket-user">
+        <span className="mp-ticket-user mp-tooltip-container">
           <span className="mp-ticket-user-dot" />
           @{ticket.user}
+          <span className="mp-tooltip">{studentNames?.[ticket.ownerRollno] || 'Unknown'}</span>
         </span>
         <span className={`mp-status ${ticket.status}`}>{ticket.status}</span>
       </div>
@@ -101,6 +107,7 @@ export default function Marketplace({ user, onLogout }) {
   const [formTitle, setFormTitle] = useState('')
   const [formDesc, setFormDesc]   = useState('')
   const [formCategory, setFormCategory] = useState('')
+  const [formPrice, setFormPrice] = useState('')
 
   // ticket detail popup state
   const [selectedTicket, setSelectedTicket] = useState(null)
@@ -109,6 +116,19 @@ export default function Marketplace({ user, onLogout }) {
   // ticket state
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
+  const [studentNames, setStudentNames] = useState({})
+
+  useEffect(() => {
+    const fetchNames = async () => {
+      const { data } = await supabase.from('StudentNames').select('*')
+      if (data) {
+        const map = {}
+        data.forEach(d => map[d.rollno] = d.first_name || d.real_name || 'Unknown')
+        setStudentNames(map)
+      }
+    }
+    fetchNames()
+  }, [])
 
   const fetchTickets = async () => {
     try {
@@ -121,7 +141,7 @@ export default function Marketplace({ user, onLogout }) {
           claimant_rollno,
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
-          metadata:TicketTableData ( title, description, category, status )
+          metadata:TicketTableData ( title, description, category, status, ItemPrice )
         `)
       
       if (error) throw error
@@ -140,6 +160,7 @@ export default function Marketplace({ user, onLogout }) {
             title: meta.title || 'Untitled',
             desc: meta.description || '',
             category: meta.category || 'General',
+            price: meta.ItemPrice || 0,
             user: username,
             ownerRollno: t.owner_rollno,
             claimantRollno: t.claimant_rollno,
@@ -166,6 +187,7 @@ export default function Marketplace({ user, onLogout }) {
     setFormTitle('')
     setFormDesc('')
     setFormCategory('')
+    setFormPrice('')
   }
 
   const handleSubmit = async () => {
@@ -195,6 +217,7 @@ export default function Marketplace({ user, onLogout }) {
           title: formTitle,
           description: formDesc,
           category: formCategory,
+          ItemPrice: formPrice ? parseInt(formPrice, 10) : 0,
           status: 'pending'
         })
       
@@ -410,6 +433,7 @@ export default function Marketplace({ user, onLogout }) {
                   index={i}
                   type="request"
                   onClick={setSelectedTicket}
+                  studentNames={studentNames}
                 />
               ))}
             </div>
@@ -442,6 +466,7 @@ export default function Marketplace({ user, onLogout }) {
                   index={i}
                   type="seller"
                   onClick={setSelectedTicket}
+                  studentNames={studentNames}
                 />
               ))}
             </div>
@@ -522,6 +547,21 @@ export default function Marketplace({ user, onLogout }) {
               </div>
 
               <div>
+                <label className="mp-modal-label" htmlFor="modal-price-input">
+                  Price (₹)
+                </label>
+                <input
+                  id="modal-price-input"
+                  className="mp-modal-input"
+                  type="number"
+                  placeholder="0 for free / exchange"
+                  value={formPrice}
+                  onChange={(e) => setFormPrice(e.target.value)}
+                  min="0"
+                />
+              </div>
+
+              <div>
                 <label className="mp-modal-label" htmlFor="modal-category-select">
                   Category
                 </label>
@@ -586,6 +626,9 @@ export default function Marketplace({ user, onLogout }) {
             <div className="mp-detail-header">
               <div className="mp-detail-id">{selectedTicket.id}</div>
               <h2 className="mp-detail-title">{selectedTicket.title}</h2>
+              {selectedTicket.price > 0 && (
+                <div className="mp-detail-price">₹{selectedTicket.price}</div>
+              )}
             </div>
 
             {/* Description */}
@@ -602,8 +645,9 @@ export default function Marketplace({ user, onLogout }) {
             {/* Posted by */}
             <div className="mp-detail-user-row">
               <span className="mp-ticket-user-dot" />
-              <span className="mp-detail-posted-by">
+              <span className="mp-detail-posted-by mp-tooltip-container">
                 Posted by <strong>@{selectedTicket.user}</strong>
+                <span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span>
               </span>
             </div>
 
@@ -617,7 +661,8 @@ export default function Marketplace({ user, onLogout }) {
                     <span className="mp-detail-claimed-sub">You claimed this ticket.</span>
                   ) : (
                     <span className="mp-detail-claimed-sub">
-                      @{selectedTicket.claimantUser || 'Someone'} already grabbed this one.
+                        <strong className="mp-tooltip-container">@{selectedTicket.claimantUser || 'Someone'}
+                          {selectedTicket.claimantRollno && <span className="mp-tooltip">{studentNames?.[selectedTicket.claimantRollno] || 'Unknown'}</span>}</strong> already grabbed this one.
                     </span>
                   )}
                 </div>
@@ -630,7 +675,8 @@ export default function Marketplace({ user, onLogout }) {
                 <Gavel size={18} className="mp-detail-bargain-icon" />
                 <div className="mp-detail-bargain-text">
                   <strong>Got a better deal?</strong>
-                  <span>Reach out to @{selectedTicket.user} and offer a bargain!</span>
+                  <span>Reach out to <strong className="mp-tooltip-container">@{selectedTicket.user}
+                    <span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span></strong> and offer a bargain!</span>
                 </div>
               </div>
             )}
@@ -682,7 +728,8 @@ export default function Marketplace({ user, onLogout }) {
                 <div className="mp-detail-owner-claimed-actions">
                   <div className="mp-detail-owner-note success">
                     <CheckCircle2 size={16} />
-                    <span>Claimed by @{selectedTicket.claimantUser || 'Someone'}! Connect with them.</span>
+                    <span>Claimed by <strong className="mp-tooltip-container">@{selectedTicket.claimantUser || 'Someone'}
+                      {selectedTicket.claimantRollno && <span className="mp-tooltip">{studentNames?.[selectedTicket.claimantRollno] || 'Unknown'}</span>}</strong>! Connect with them.</span>
                   </div>
                   <button
                     className="mp-detail-close-ticket-btn"

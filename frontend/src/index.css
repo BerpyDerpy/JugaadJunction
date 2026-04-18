@@ -315,3 +315,360 @@ body {
   color: var(--accent-hover);
   text-decoration: underline;
 }
+
+/* ── Button loading state ── */
+.btn-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btnSpin 0.7s linear infinite;
+}
+
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   WELCOME REVEAL SCREEN
+   ============================================ */
+.welcome-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 30%, #0d1117 70%, #150520 100%);
+  overflow: hidden;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ── Floating background blobs ── */
+.welcome-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.welcome-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: blobDrift 12s infinite ease-in-out alternate;
+}
+
+.blob-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.6), transparent 70%);
+  top: -10%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.5), transparent 70%);
+  bottom: -15%;
+  right: -10%;
+  animation-delay: -4s;
+}
+
+.blob-3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.4), transparent 70%);
+  top: 50%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  animation-delay: -8s;
+}
+
+@keyframes blobDrift {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.1); }
+  66% { transform: translate(-20px, 30px) scale(0.95); }
+  100% { transform: translate(15px, 10px) scale(1.05); }
+}
+
+/* ── Content container ── */
+.welcome-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+}
+
+/* ── Shared line animation ── */
+.welcome-line {
+  opacity: 0;
+  transform: translateY(30px) scale(0.9);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: blur(8px);
+}
+
+.welcome-line.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+/* ── Greeting line ── */
+.welcome-greeting {
+  font-size: 24px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  letter-spacing: 0.5px;
+}
+
+.welcome-emoji {
+  font-size: 32px;
+  display: inline-block;
+  animation: waveHand 1.5s ease-in-out infinite;
+  transform-origin: 70% 70%;
+}
+
+@keyframes waveHand {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(20deg); }
+  50% { transform: rotate(-10deg); }
+  75% { transform: rotate(15deg); }
+}
+
+/* ── Real name ── */
+.welcome-real-name {
+  font-size: 52px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  margin-bottom: 28px;
+  text-shadow: none;
+}
+
+/* ── Divider ── */
+.welcome-divider {
+  width: 0;
+  height: 2px;
+  margin: 0 auto 28px;
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.6), rgba(236, 72, 153, 0.6), transparent);
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 2px;
+}
+
+.welcome-divider.visible {
+  width: 80%;
+}
+
+/* ── Identity label ── */
+.welcome-identity-label {
+  font-size: 16px;
+  color: #64748b;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 500;
+}
+
+.welcome-sparkle {
+  color: #f59e0b;
+  animation: sparkleRotate 2s linear infinite;
+}
+
+@keyframes sparkleRotate {
+  0% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(15deg) scale(1.2); }
+  50% { transform: rotate(0deg) scale(1); }
+  75% { transform: rotate(-15deg) scale(1.1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+/* ── The Disgusting Nickname ── */
+.welcome-nickname {
+  font-size: 44px;
+  font-weight: 800;
+  margin-bottom: 32px;
+  line-height: 1.2;
+  background: linear-gradient(
+    135deg,
+    #a855f7 0%,
+    #ec4899 25%,
+    #f59e0b 50%,
+    #22c55e 75%,
+    #3b82f6 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: nicknameGradient 3s ease infinite;
+  position: relative;
+  padding: 8px 0;
+}
+
+@keyframes nicknameGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Glitch effect on the nickname */
+.welcome-nickname.visible {
+  animation:
+    nicknameGradient 3s ease infinite,
+    nicknameGlitch 0.4s ease-out 0.3s 1;
+}
+
+@keyframes nicknameGlitch {
+  0% { transform: translate(0); filter: blur(0); }
+  10% { transform: translate(-3px, 2px); filter: blur(2px); }
+  20% { transform: translate(3px, -2px); filter: blur(0); }
+  30% { transform: translate(-2px, -1px); filter: blur(1px); }
+  40% { transform: translate(2px, 1px); filter: blur(0); }
+  50% { transform: translate(-1px, 2px); filter: blur(1px); }
+  60% { transform: translate(1px, -1px); filter: blur(0); }
+  100% { transform: translate(0); filter: blur(0); }
+}
+
+/* ── The ominous notice ── */
+.welcome-notice {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  margin: 0 auto 32px;
+  max-width: 360px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-size: 15px;
+  font-weight: 600;
+  color: #fca5a5;
+  letter-spacing: 0.3px;
+}
+
+.welcome-notice.visible {
+  opacity: 1;
+  transform: translateY(0);
+  animation: noticeShake 0.5s ease-in-out 0.3s 1;
+}
+
+@keyframes noticeShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-1deg); }
+  40% { transform: translateX(6px) rotate(1deg); }
+  60% { transform: translateX(-4px) rotate(-0.5deg); }
+  80% { transform: translateX(4px) rotate(0.5deg); }
+}
+
+.welcome-notice-icon {
+  font-size: 20px;
+}
+
+/* ── Continue button ── */
+.welcome-continue-btn {
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: white;
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 10px 30px -5px rgba(168, 85, 247, 0.4),
+    0 0 0 0 rgba(168, 85, 247, 0);
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-continue-btn.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.welcome-continue-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.welcome-continue-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow:
+    0 16px 40px -5px rgba(168, 85, 247, 0.5),
+    0 0 0 4px rgba(168, 85, 247, 0.15);
+}
+
+.welcome-continue-btn:hover::before {
+  left: 100%;
+}
+
+.welcome-continue-btn:active {
+  transform: translateY(0) scale(1);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .welcome-real-name {
+    font-size: 36px;
+  }
+
+  .welcome-nickname {
+    font-size: 30px;
+  }
+
+  .welcome-greeting {
+    font-size: 20px;
+  }
+
+  .welcome-content {
+    padding: 24px 20px;
+  }
+
+  .welcome-continue-btn {
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+}

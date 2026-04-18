@@ -276,6 +276,31 @@
   margin-bottom: 14px;
 }
 
+.mp-ticket-price {
+  display: inline-block;
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.mp-detail-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  margin-top: 8px;
+  display: inline-block;
+}
+
 /* category tag */
 .mp-ticket-category {
   display: inline-block;
@@ -314,6 +339,53 @@
   height: 8px;
   border-radius: 50%;
   background: #d97706;
+}
+
+/* ---------- Tooltips for Real Name --------- */
+.mp-tooltip-container {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.mp-tooltip {
+  visibility: hidden;
+  width: max-content;
+  background-color: #2c1e10;
+  color: #f5e6d3;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 10px;
+  position: absolute;
+  z-index: 500;
+  bottom: 125%; /* Position above */
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s, bottom 0.2s;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+/* Tooltip arrow */
+.mp-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #2c1e10 transparent transparent transparent;
+}
+
+.mp-tooltip-container:hover .mp-tooltip {
+  visibility: visible;
+  opacity: 1;
+  bottom: 135%;
 }
 
 /* status badges */

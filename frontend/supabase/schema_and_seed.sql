@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS public."TicketTableData" (
   title VARCHAR(255) NOT NULL,
   description TEXT,
   category VARCHAR(100),
-  status VARCHAR(20) CHECK (status IN ('pending', 'claimed', 'closed', 'time barred')) DEFAULT 'pending'
+  status VARCHAR(20) CHECK (status IN ('pending', 'claimed', 'closed', 'time barred')) DEFAULT 'pending',
+  "ItemPrice" INT DEFAULT 0
 );
 
 -- Schema Migrations for existing tables
@@ -28,6 +29,7 @@ ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS type VARCHAR(10) CHECK
 ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT 'Untitled';
 ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS "ItemPrice" INT DEFAULT 0;
 ALTER TABLE public."TicketTableData" DROP COLUMN IF EXISTS data;
 
 -- Dummy Data Insertion
@@ -45,11 +47,41 @@ INSERT INTO public."TicketTable" (ticketid, owner_rollno, claimant_rollno, type)
 (3, '160124737179', '160124737178', 'post')
 ON CONFLICT (ticketid) DO NOTHING;
 
-INSERT INTO public."TicketTableData" (ticketid, title, description, category, status) VALUES
-(1, 'Need 2 A4 sheets urgently', 'Have a lab record submission in 20 min. Will return tomorrow!', 'A4', 'pending'),
-(2, 'Selling 50 extra A4 sheets', 'Bought a ream, only used half. ₹30 for the lot, meet near canteen.', 'A4', 'claimed'),
-(3, 'Water bottle (Milton 1L)', 'Bought two by mistake. Sealed, unused. ₹150.', 'Water Bottle', 'closed')
+INSERT INTO public."TicketTableData" (ticketid, title, description, category, status, "ItemPrice") VALUES
+(1, 'Need 2 A4 sheets urgently', 'Have a lab record submission in 20 min. Will return tomorrow!', 'A4', 'pending', 0),
+(2, 'Selling 50 extra A4 sheets', 'Bought a ream, only used half. ₹30 for the lot, meet near canteen.', 'A4', 'claimed', 30),
+(3, 'Water bottle (Milton 1L)', 'Bought two by mistake. Sealed, unused. ₹150.', 'Water Bottle', 'closed', 150)
 ON CONFLICT (ticketid) DO NOTHING;
 
 -- Ensure sequence is updated
 SELECT setval('public."TicketTable_ticketid_seq"', COALESCE((SELECT MAX(ticketid) FROM public."TicketTable") + 1, 1), false);
+
+-- StudentNames Lookup Table (Roll Number -> Real Name)
+CREATE TABLE IF NOT EXISTS public."StudentNames" (
+  rollno VARCHAR(25) PRIMARY KEY,
+  real_name VARCHAR(255) NOT NULL
+);
+
+-- Seed student names
+INSERT INTO public."StudentNames" (rollno, real_name) VALUES
+('160124737177', 'Mahitha Zari'),
+('160124737178', 'John Doe'),
+('160124737179', 'Jane Doe'),
+('160124737180', 'Arjun Mehta'),
+('160124737181', 'Priya Sharma'),
+('160124737182', 'Ravi Kumar'),
+('160124737183', 'Sneha Reddy'),
+('160124737184', 'Vikram Singh'),
+('160124737185', 'Ananya Patel'),
+('160124737186', 'Karthik Nair'),
+('160124737187', 'Divya Iyer'),
+('160124737188', 'Rahul Gupta'),
+('160124737189', 'Meera Krishnan'),
+('160124737190', 'Aditya Joshi'),
+('160124737191', 'Pooja Verma'),
+('160124737192', 'Suresh Babu'),
+('160124737193', 'Lakshmi Devi'),
+('160124737194', 'Nikhil Rao'),
+('160124737195', 'Deepika Pillai'),
+('160124737196', 'Sanjay Mishra')
+ON CONFLICT (rollno) DO NOTHING;

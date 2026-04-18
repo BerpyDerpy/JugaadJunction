@@ -8,9 +8,9 @@ import {
   Megaphone,
   Hand,
   CheckCircle2,
-  AlertTriangle,
   Trash2,
 } from 'lucide-react'
+import React from 'react'
 import './Dashboard.css'
 
 // ── Card styling helpers (same as Marketplace) ─────────────────
@@ -63,7 +63,7 @@ function CreditWheel({ score, max = 100 }) {
 }
 
 // ── Ticket Card (matches Marketplace exactly) ──────────────────
-function DashTicketCard({ ticket, index, type, onClick }) {
+function DashTicketCard({ ticket, index, type, onClick, studentNames }) {
   const showTape = index % 4 === 1
   const showStain = index % 5 === 3
 
@@ -84,14 +84,20 @@ function DashTicketCard({ ticket, index, type, onClick }) {
 
       <div className="mp-ticket-id">{ticket.id}</div>
       <div className="mp-ticket-title">{ticket.title}</div>
+      
+      {ticket.price > 0 && (
+        <span className="mp-ticket-price">₹{ticket.price}</span>
+      )}
+
       <div className="mp-ticket-desc">{ticket.desc}</div>
 
       <span className="mp-ticket-category">{ticket.category}</span>
 
       <div className="mp-ticket-footer">
-        <span className="mp-ticket-user">
+        <span className="mp-ticket-user mp-tooltip-container">
           <span className="mp-ticket-user-dot" />
           @{ticket.user}
+          <span className="mp-tooltip">{studentNames?.[ticket.ownerRollno] || 'Unknown'}</span>
         </span>
         <span className={`mp-status ${ticket.status}`}>{ticket.status}</span>
       </div>
@@ -106,8 +112,18 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [activeTab, setActiveTab] = useState('posted') // 'posted' | 'requested'
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [socialCredit, setSocialCredit] = useState(user?.social_credit ?? 75)
+  const [studentNames, setStudentNames] = useState({})
 
   useEffect(() => {
+    const fetchNames = async () => {
+      const { data } = await supabase.from('StudentNames').select('*')
+      if (data) {
+        const map = {}
+        data.forEach(d => map[d.rollno] = d.first_name || d.real_name || 'Unknown')
+        setStudentNames(map)
+      }
+    }
+    fetchNames()
     fetchUserTickets()
     fetchSocialCredit()
   }, [])
@@ -138,7 +154,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           claimant_rollno,
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
-          metadata:TicketTableData ( title, description, category, status )
+          metadata:TicketTableData ( title, description, category, status, ItemPrice )
         `)
         .or(`owner_rollno.eq.${user.rollno},claimant_rollno.eq.${user.rollno}`)
 
@@ -156,6 +172,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             title: meta.title || 'Untitled',
             desc: meta.description || '',
             category: meta.category || 'General',
+            price: meta.ItemPrice || 0,
             user: username,
             ownerRollno: t.owner_rollno,
             claimantRollno: t.claimant_rollno,
@@ -304,6 +321,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   index={i}
                   type={t.type}
                   onClick={setSelectedTicket}
+                  studentNames={studentNames}
                 />
               ))}
             </div>
@@ -354,6 +372,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             <div className="mp-detail-header">
               <div className="mp-detail-id">{selectedTicket.id}</div>
               <h2 className="mp-detail-title">{selectedTicket.title}</h2>
+              {selectedTicket.price > 0 && (
+                <div className="mp-detail-price">₹{selectedTicket.price}</div>
+              )}
             </div>
 
             <p className="mp-detail-desc">{selectedTicket.desc || 'No description provided.'}</p>
@@ -367,8 +388,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
 
             <div className="mp-detail-user-row">
               <span className="mp-ticket-user-dot" />
-              <span className="mp-detail-posted-by">
+              <span className="mp-detail-posted-by mp-tooltip-container">
                 Posted by <strong>@{selectedTicket.user}</strong>
+                <span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span>
               </span>
             </div>
 
@@ -398,7 +420,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   <CheckCircle2 size={16} />
                   <span>
                     {selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno
-                      ? `You claimed this ticket! Reach out to @${selectedTicket.user} to finalize.`
+                      ? <React.Fragment>You claimed this ticket! Reach out to <strong className="mp-tooltip-container">@{selectedTicket.user}<span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span></strong> to finalize.</React.Fragment>
                       : "Your ticket has been claimed! Connect with the claimant."}
                   </span>
                 </div>
