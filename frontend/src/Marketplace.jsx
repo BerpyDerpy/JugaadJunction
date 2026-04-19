@@ -16,6 +16,13 @@ import {
   Lock,
   Trash2,
   Undo2,
+  Shield,
+  HelpCircle,
+  Zap,
+  Star,
+  ThumbsUp,
+  Ticket,
+  CircleDollarSign,
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import { usePushNotifications } from './usePushNotifications'
@@ -97,7 +104,7 @@ function TicketCard({ ticket, index, type, onClick, studentNames, user }) {
 }
 
 // ─── Marketplace ────────────────────────────────────────────────
-export default function Marketplace({ user, onLogout }) {
+export default function Marketplace({ user, onLogout, onToggleAdminView }) {
   // Setup push notifications based on user
   usePushNotifications(user?.rollno)
 
@@ -107,6 +114,7 @@ export default function Marketplace({ user, onLogout }) {
 
   // dashboard state
   const [dashboardOpen, setDashboardOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // modal state (create ticket)
   const [modalOpen, setModalOpen] = useState(null) // 'request' | 'seller' | null
@@ -449,6 +457,20 @@ export default function Marketplace({ user, onLogout }) {
         <span className="mp-topbar-title">📌 Jugaad Junction</span>
 
         <div className="mp-topbar-user">
+          <button
+            className="mp-help-btn"
+            onClick={() => setHelpOpen(true)}
+            id="help-btn"
+            title="Help"
+          >
+            <HelpCircle size={18} />
+          </button>
+          {onToggleAdminView && (
+            <button className="mp-logout-btn" onClick={onToggleAdminView} style={{ marginRight: '10px', background: 'var(--red-pastel)', borderColor: 'var(--red-dark)' }}>
+              <Shield size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+              Admin
+            </button>
+          )}
           <button className="mp-logout-btn" onClick={onLogout} id="logout-btn">
             <LogOut size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
             Log out
@@ -885,6 +907,116 @@ export default function Marketplace({ user, onLogout }) {
                   )}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Help Modal ── */}
+      {helpOpen && (
+        <div className="mp-modal-overlay" onClick={() => setHelpOpen(false)} id="help-overlay">
+          <div className="mp-help-modal" onClick={(e) => e.stopPropagation()} id="help-modal">
+            <div className="mp-help-modal-pin" />
+            <button className="mp-modal-close mp-detail-close" onClick={() => setHelpOpen(false)} id="help-close">
+              <X size={16} />
+            </button>
+
+            <div className="mp-help-header">
+              <h2 className="mp-help-title">How This Place Works</h2>
+              <p className="mp-help-subtitle">A survival guide for the economically desperate</p>
+            </div>
+
+            <div className="mp-help-body">
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon request-icon"><Megaphone size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Requests</h3>
+                  <p className="mp-help-section-text">
+                    Need something you definitely should have brought from home? Post a Request.
+                    Other students will see your plea for help and (hopefully) take pity on you.
+                    Think of it as a public announcement of your lack of preparation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon offer-icon"><Package size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Offers</h3>
+                  <p className="mp-help-section-text">
+                    Got extra stuff? Feeling charitable? Or just entrepreneurial?
+                    Post an Offer and let the marketplace know you are open for business.
+                    You are basically a shopkeeper now. Congratulations on your new career.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon claim-icon"><ThumbsUp size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Claiming Tickets</h3>
+                  <p className="mp-help-section-text">
+                    See a ticket you can help with? Hit "Claim" to let the poster know
+                    you are interested. Multiple people can claim the same ticket, so
+                    think of it less like "dibs" and more like "standing in line at a concert."
+                    The owner picks who they vibe with.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon price-icon"><CircleDollarSign size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Pricing and Negotiation</h3>
+                  <p className="mp-help-section-text">
+                    Every ticket can have a price. If someone sets "0" it means free (or they
+                    forgot). If multiple people claim a ticket, the original poster gets to
+                    pick who gets it.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon credit-icon"><Star size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Social Credit</h3>
+                  <p className="mp-help-section-text">
+                    Every user starts with 100 Social Credit. Help people and your
+                    reputation grows. Annoy people and the admin might have fun with your score.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon dashboard-icon"><Zap size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Your Dashboard</h3>
+                  <p className="mp-help-section-text">
+                    Click your avatar in the top right to open the dashboard. You can see
+                    your Social Credit score, your active tickets, tickets you have claimed,
+                    and tickets that are closed. You can also close or delete tickets from
+                    there.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-section">
+                <div className="mp-help-section-icon complain-icon"><Ticket size={18} /></div>
+                <div>
+                  <h3 className="mp-help-section-title">Complaints</h3>
+                  <p className="mp-help-section-text">
+                    Someone being shady? File a complaint from your dashboard.
+                    The admin (Roll No 9999, fear them) reviews complaints and takes
+                    action.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mp-help-footer">
+                <p>Still confused? Contact one of the creators:
+                  mahithazari@gmail.com | nandu211020@gmail.com</p>
+                <p className="mp-help-footer-small">If all else fails, just click buttons until something works.</p>
+              </div>
             </div>
           </div>
         </div>

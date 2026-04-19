@@ -15,7 +15,7 @@ import {
 import './AdminPanel.css'
 
 // ─── AdminPanel ─────────────────────────────────────────────────
-export default function AdminPanel({ user, onLogout }) {
+export default function AdminPanel({ user, onLogout, onToggleView }) {
   const [activeTab, setActiveTab] = useState('credits') // 'credits' | 'complaints'
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState(null)
@@ -190,8 +190,14 @@ export default function AdminPanel({ user, onLogout }) {
           </span>
         </div>
         <div className="admin-topbar-right">
+          {onToggleView && (
+            <button className="admin-logout-btn" onClick={onToggleView} style={{ marginRight: '10px' }}>
+              <Search size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+              Marketplace
+            </button>
+          )}
           <button className="admin-logout-btn" onClick={onLogout} id="admin-logout">
-            <LogOut size={14} />
+            <LogOut size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
             Log out
           </button>
         </div>

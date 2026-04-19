@@ -616,7 +616,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                 <div className="mp-detail-owner-note success">
                   <CheckCircle2 size={16} />
                   <span>
-                    You claimed this ticket! Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to finalize.
+                    Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to finalize.
                   </span>
                 </div>
               )}

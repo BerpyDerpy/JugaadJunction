@@ -3,11 +3,11 @@
 
 const ADJECTIVES = [
   'homophobic', 'racist', 'sexist', 'pedophile', 'incel',
-  'virgin', 'simp', 'beta', 'faggot', 'chink', 'nigger',
+  'simp', 'beta', 'faggot', 'chink', 'nigger',
   'pajeet', 'streetshitter',
   'terrorist', 'jihadi', 'gandu', 'chutiya',
   'randi', 'harami', 'kamina',
-  'gaand', 'shit', 'piss',
+  'gaand', 'shitty', 'pissy',
   'sweaty', 'oily', 'greasy', 'itchy', 'sticky', 'slimy'
 ]
 
@@ -72,8 +72,7 @@ export function generateAbsurdDisgustingNickname(realName) {
     () => `${adj1}${name}`,                    // homoYashwanth
     () => `${title}${adj1}${name}`,            // bhaiHomoYashwanth
     () => `${adj1}${adj2}${name}`,             // racistIncelyashwanth
-    () => `${adj1}${name}${adj2}`,             // homoYashwanthShitter
-    () => `${title}${adj1}${name}`,            // panditHomoYashwanth   (shorter version)
+    () => `${title}${adj2}${name}`,            // panditHomoYashwanth   (shorter version)
     () => `${adj1}${name}${title}`,            // homoYashwanthBhai
     () => `${adj2}${name}`,                    // ganduYashwanth        (single short)
   ]

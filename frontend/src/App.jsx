@@ -204,6 +204,8 @@ function App() {
   const [error, setError] = useState(null)
   const [isSignUp, setIsSignUp] = useState(false)
 
+  const [adminMode, setAdminMode] = useState('admin')
+
   // Welcome reveal state
   const [showWelcome, setShowWelcome] = useState(false)
   const [welcomeData, setWelcomeData] = useState(null) // { realName, nickname, userData }
@@ -334,7 +336,7 @@ function App() {
 
   // If user is logged in, route admin vs regular user
   if (user) {
-    if (user.rollno === '9999') {
+    if (user.rollno === '9999' && adminMode === 'admin') {
       return (
         <AdminPanel
           user={user}
@@ -343,7 +345,9 @@ function App() {
             setRollno('')
             setPassword('')
             localStorage.removeItem('jj_user')
+            setAdminMode('admin')
           }}
+          onToggleView={() => setAdminMode('marketplace')}
         />
       )
     }
@@ -355,7 +359,9 @@ function App() {
           setRollno('')
           setPassword('')
           localStorage.removeItem('jj_user')
+          setAdminMode('admin')
         }}
+        onToggleAdminView={user.rollno === '9999' ? () => setAdminMode('admin') : undefined}
       />
     )
   }
