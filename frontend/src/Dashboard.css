@@ -353,3 +353,83 @@
     padding: 10px 12px;
   }
 }
+
+/* ---------- witty toast ---------- */
+.db-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  animation: toastSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+             toastFadeOut 0.35s ease 2.8s forwards;
+  pointer-events: none;
+}
+
+.db-toast-msg {
+  display: inline-block;
+  padding: 14px 26px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2c1e10 0%, #4a2e1e 100%);
+  border: 1.5px solid rgba(217, 119, 6, 0.4);
+  color: #fde68a;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(217, 119, 6, 0.15),
+    inset 0 1px 0 rgba(245, 230, 211, 0.06);
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes toastFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; transform: translateX(-50%) translateY(8px); }
+}
+
+/* ---------- unclaim button ---------- */
+.db-unclaim-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.12);
+  color: #fbbf24;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.db-unclaim-btn:hover:not(:disabled) {
+  background: rgba(234, 179, 8, 0.2);
+  border-color: rgba(234, 179, 8, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.2);
+}
+
+.db-unclaim-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

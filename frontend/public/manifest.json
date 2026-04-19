@@ -3,12 +3,12 @@
   "short_name": "Jugaad",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#863bff",
+  "background_color": "#5c3d2e",
+  "theme_color": "#5c3d2e",
   "description": "A hyper-local peer-to-peer resource exchange platform for students.",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/jj-icon.svg",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"

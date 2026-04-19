@@ -15,6 +15,7 @@ import {
   XCircle,
   Lock,
   Trash2,
+  Undo2,
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import { usePushNotifications } from './usePushNotifications'
@@ -395,6 +396,37 @@ export default function Marketplace({ user, onLogout }) {
     }
   }
 
+  // ─── Unclaim ticket handler ──────────────────────────────────────
+  const [unclaiming, setUnclaiming] = useState(false)
+
+  const handleUnclaim = async (ticket) => {
+    if (unclaiming) return
+    if (!window.confirm("Release this ticket? It'll go back to pending.")) return
+    setUnclaiming(true)
+    try {
+      const { error: metaError } = await supabase
+        .from('TicketTableData')
+        .update({ status: 'pending' })
+        .eq('ticketid', ticket.ticketid)
+      if (metaError) throw metaError
+
+      const { error: ticketError } = await supabase
+        .from('TicketTable')
+        .update({ claimant_rollno: null })
+        .eq('ticketid', ticket.ticketid)
+      if (ticketError) throw ticketError
+
+      playClose()
+      setSelectedTicket(null)
+      await fetchTickets()
+    } catch (err) {
+      console.error('Error unclaiming ticket:', err)
+      alert('Failed to unclaim ticket')
+    } finally {
+      setUnclaiming(false)
+    }
+  }
+
   // Determine popup state for selected ticket
   const isOwner = selectedTicket?.ownerRollno === user.rollno
   const isClaimed = selectedTicket?.status === 'claimed'
@@ -749,6 +781,28 @@ export default function Marketplace({ user, onLogout }) {
                     <>
                       <Hand size={18} />
                       Claim this Ticket
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Unclaim button — only for the claimant */}
+              {isClaimed && isClaimant && !isOwner && !isClosed && (
+                <button
+                  className="mp-detail-unclaim-btn"
+                  onClick={() => handleUnclaim(selectedTicket)}
+                  disabled={unclaiming}
+                  id="unclaim-ticket-btn"
+                >
+                  {unclaiming ? (
+                    <>
+                      <div className="mp-detail-btn-spinner" />
+                      Releasing…
+                    </>
+                  ) : (
+                    <>
+                      <Undo2 size={18} />
+                      Unclaim Ticket
                     </>
                   )}
                 </button>

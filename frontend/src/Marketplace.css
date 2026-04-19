@@ -1281,3 +1281,39 @@
     font-size: 22px;
   }
 }
+
+/* ---------- unclaim button ---------- */
+.mp-detail-unclaim-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.3);
+  margin-top: 8px;
+}
+
+.mp-detail-unclaim-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fbbf24, #eab308);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(234, 179, 8, 0.4);
+}
+
+.mp-detail-unclaim-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mp-detail-unclaim-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

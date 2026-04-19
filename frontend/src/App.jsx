@@ -290,7 +290,7 @@ function App() {
           if (dbError.code === 'PGRST116') {
             throw new Error('Invalid roll number or password.')
           }
-          throw new Error('Database error. Did you run the SQL seed in Supabase?')
+          throw new Error('Database error.')
         }
 
         // Note: Storing plain passwords ain't secure, but keeping it simple as per schema!
@@ -380,7 +380,7 @@ function App() {
                 id="rollno"
                 type="text"
                 className="form-input"
-                placeholder="e.g. 160124737177"
+                placeholder="ex: 160124737***"
                 value={rollno}
                 onChange={(e) => setRollno(e.target.value)}
                 onKeyDown={(e) => {
@@ -422,15 +422,15 @@ function App() {
                 {isSignUp ? 'Generating your fate...' : 'Authenticating...'}
               </span>
             ) : (
-              isSignUp ? '🎲 Roll the Dice (Sign Up)' : 'Sign In'
+              isSignUp ? 'Sign Up' : 'Sign In'
             )}
           </button>
 
           <div className="auth-toggle">
             <span onClick={() => { setIsSignUp(!isSignUp); setError(null) }}>
               {isSignUp
-                ? "Already cursed with a name? Sign in"
-                : "Fresh meat? Sign up for a name you can't escape"}
+                ? "Already have a name? Sign in"
+                : "Fresh meat? Sign up"}
             </span>
           </div>
         </form>

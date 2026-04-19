@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   Trash2,
   AlertTriangle,
+  Undo2,
 } from 'lucide-react'
 import React from 'react'
+import { playPop, playClose } from './sounds'
 import './Dashboard.css'
 
 // ── Card styling helpers (same as Marketplace) ─────────────────
@@ -85,7 +87,7 @@ function DashTicketCard({ ticket, index, type, onClick, studentNames }) {
 
       <div className="mp-ticket-id">{ticket.id}</div>
       <div className="mp-ticket-title">{ticket.title}</div>
-      
+
       {ticket.price > 0 && (
         <span className="mp-ticket-price">₹{ticket.price}</span>
       )}
@@ -107,6 +109,18 @@ function DashTicketCard({ ticket, index, type, onClick, studentNames }) {
 }
 
 // ── Dashboard Component ────────────────────────────────────────
+// ── Witty "not implemented" messages ───────────────────────────
+const WITTY_MESSAGES = [
+  "🚧 Our notification hamster is still on vacation.",
+  "🔔 Notifications? We're still teaching the bell to ring.",
+  "📬 Your inbox called, it said it doesn't exist yet.",
+  "🛠️ This feature is \"coming soon™\".",
+  "🐛 We were going to build this, but we got distracted by chai.",
+  "🪄 Abracadabra! …nope, still not implemented.",
+  "💤 Notifications are taking a power nap. Check back never.",
+  "🎯 Feature status: vibes only, no code.",
+]
+
 export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -114,6 +128,8 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [socialCredit, setSocialCredit] = useState(user?.social_credit ?? 75)
   const [studentNames, setStudentNames] = useState({})
+  const [toast, setToast] = useState(null)
+  const [unclaiming, setUnclaiming] = useState(false)
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -240,6 +256,43 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     }
   }
 
+  // ── Show witty toast ──────────────────────────────────────────
+  const showWittyToast = () => {
+    playPop()
+    const msg = WITTY_MESSAGES[Math.floor(Math.random() * WITTY_MESSAGES.length)]
+    setToast(msg)
+    setTimeout(() => setToast(null), 3200)
+  }
+
+  // ── Unclaim ticket handler ──────────────────────────────────────
+  const handleUnclaim = async (ticket) => {
+    if (unclaiming) return
+    if (!window.confirm("Release this ticket? It'll go back to pending.")) return
+    setUnclaiming(true)
+    try {
+      const { error: metaError } = await supabase
+        .from('TicketTableData')
+        .update({ status: 'pending' })
+        .eq('ticketid', ticket.ticketid)
+      if (metaError) throw metaError
+
+      const { error: ticketError } = await supabase
+        .from('TicketTable')
+        .update({ claimant_rollno: null })
+        .eq('ticketid', ticket.ticketid)
+      if (ticketError) throw ticketError
+
+      playClose()
+      setSelectedTicket(null)
+      await fetchUserTickets()
+    } catch (err) {
+      console.error('Error unclaiming ticket:', err)
+      alert('Failed to unclaim ticket')
+    } finally {
+      setUnclaiming(false)
+    }
+  }
+
   return (
     <div className="db-overlay" id="dashboard-overlay" onClick={onClose}>
       <div className="db-panel" onClick={e => e.stopPropagation()} id="dashboard-panel">
@@ -262,7 +315,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
         <div className="db-nav-row" id="dashboard-nav-row">
           <button
             className="db-nav-btn"
-            onClick={() => { onClose(); }}
+            onClick={showWittyToast}
             id="nav-notifications"
           >
             <Bell size={16} />
@@ -335,8 +388,8 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                 {activeTab === 'posted'
                   ? "You haven't posted any offers yet."
                   : activeTab === 'requested'
-                  ? "You haven't made any requests yet."
-                  : "You haven't claimed any tickets yet."}
+                    ? "You haven't made any requests yet."
+                    : "You haven't claimed any tickets yet."}
               </p>
             </div>
           )}
@@ -427,6 +480,28 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                 </div>
               )}
 
+              {/* Unclaim button — only for the claimant */}
+              {isClaimed && selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno && (
+                <button
+                  className="db-unclaim-btn"
+                  onClick={() => handleUnclaim(selectedTicket)}
+                  disabled={unclaiming}
+                  id="dash-unclaim-ticket-btn"
+                >
+                  {unclaiming ? (
+                    <>
+                      <div className="mp-detail-btn-spinner" />
+                      Releasing…
+                    </>
+                  ) : (
+                    <>
+                      <Undo2 size={18} />
+                      Unclaim Ticket
+                    </>
+                  )}
+                </button>
+              )}
+
               {isOwner && (
                 <button
                   className="mp-detail-claim-btn"
@@ -450,6 +525,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Witty Toast ── */}
+      {toast && (
+        <div className="db-toast" id="db-witty-toast">
+          <span className="db-toast-msg">{toast}</span>
         </div>
       )}
     </div>
