@@ -79,7 +79,7 @@ const CATEGORIES = [
 
 // Helpers for styling variety
 const CARD_VARIANTS = ['variant-cream', 'variant-blue', 'variant-yellow', 'variant-pink', 'variant-green']
-const PIN_COLORS   = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orange']
+const PIN_COLORS = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orange']
 
 function pick(arr, i) {
   return arr[i % arr.length]
@@ -87,7 +87,7 @@ function pick(arr, i) {
 
 // ─── TicketCard ─────────────────────────────────────────────────
 function TicketCard({ ticket, index, type, onClick, studentNames }) {
-  const showTape  = index % 4 === 1
+  const showTape = index % 4 === 1
   const showStain = index % 5 === 3
 
   return (
@@ -107,7 +107,7 @@ function TicketCard({ ticket, index, type, onClick, studentNames }) {
 
       <div className="mp-ticket-id">{ticket.id}</div>
       <div className="mp-ticket-title">{ticket.title}</div>
-      
+
       {ticket.price > 0 && (
         <span className="mp-ticket-price">₹{ticket.price}</span>
       )}
@@ -134,7 +134,7 @@ export default function Marketplace({ user, onLogout }) {
 
   // filter / search state
   const [activeFilter, setActiveFilter] = useState('All')
-  const [searchQuery, setSearchQuery]   = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
   // dashboard state
   const [dashboardOpen, setDashboardOpen] = useState(false)
@@ -142,7 +142,7 @@ export default function Marketplace({ user, onLogout }) {
   // modal state (create ticket)
   const [modalOpen, setModalOpen] = useState(null) // 'request' | 'seller' | null
   const [formTitle, setFormTitle] = useState('')
-  const [formDesc, setFormDesc]   = useState('')
+  const [formDesc, setFormDesc] = useState('')
   const [formCategory, setFormCategory] = useState('')
   const [formPrice, setFormPrice] = useState('')
 
@@ -154,6 +154,9 @@ export default function Marketplace({ user, onLogout }) {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [studentNames, setStudentNames] = useState({})
+
+  // persist channel for broadcasting
+  const channelRef = useRef(null)
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -180,7 +183,7 @@ export default function Marketplace({ user, onLogout }) {
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
           metadata:TicketTableData ( title, description, category, status, ItemPrice )
         `)
-      
+
       if (error) throw error
 
       if (data) {
@@ -217,7 +220,51 @@ export default function Marketplace({ user, onLogout }) {
 
   useEffect(() => {
     fetchTickets()
+
+    // Realtime subscriptions for dynamic updates
+    const channel = supabase.channel('marketplace-tickets', {
+      config: {
+        broadcast: { self: false }
+      }
+    })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'TicketTable' }, () => {
+        fetchTickets()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'TicketTableData' }, () => {
+        fetchTickets()
+      })
+      .on('broadcast', { event: 'ticket_action' }, () => {
+        fetchTickets()
+      })
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
+
+  // Update selected ticket details dynamically when the 'tickets' array is refreshed from realtime updates
+  useEffect(() => {
+    setSelectedTicket(prev => {
+      if (!prev) return null
+      const updated = tickets.find(t => t.id === prev.id)
+      if (updated) {
+        if (
+          updated.status !== prev.status ||
+          updated.claimantRollno !== prev.claimantRollno ||
+          updated.price !== prev.price ||
+          updated.title !== prev.title ||
+          updated.desc !== prev.desc
+        ) {
+          return updated
+        }
+        return prev
+      }
+      return null // the ticket might have been deleted
+    })
+  }, [tickets])
 
   const closeModal = () => {
     setModalOpen(null)
@@ -235,7 +282,7 @@ export default function Marketplace({ user, onLogout }) {
 
     try {
       const dbType = modalOpen === 'seller' ? 'post' : 'request'
-      
+
       const { data: ticketData, error: ticketError } = await supabase
         .from('TicketTable')
         .insert({
@@ -244,7 +291,7 @@ export default function Marketplace({ user, onLogout }) {
         })
         .select('ticketid')
         .single()
-      
+
       if (ticketError) throw ticketError
 
       const { error: metaError } = await supabase
@@ -257,12 +304,13 @@ export default function Marketplace({ user, onLogout }) {
           ItemPrice: formPrice ? parseInt(formPrice, 10) : 0,
           status: 'pending'
         })
-      
+
       if (metaError) throw metaError
 
       closeModal()
       playSuccess()
-      fetchTickets()
+      await fetchTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
     } catch (err) {
       playError()
       console.error("Error creating ticket:", err)
@@ -295,6 +343,7 @@ export default function Marketplace({ user, onLogout }) {
       // Refresh ticket list and update the selected ticket in the popup
       playClaim()
       await fetchTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
 
       // Update selected ticket locally so the popup reflects the change instantly
       setSelectedTicket(prev => prev ? {
@@ -364,6 +413,7 @@ export default function Marketplace({ user, onLogout }) {
       setSelectedTicket(null)
       playClose()
       await fetchTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
     } catch (err) {
       console.error('Error deleting ticket:', err)
       alert('Failed to delete ticket')
@@ -387,6 +437,7 @@ export default function Marketplace({ user, onLogout }) {
       if (error) throw error
 
       await fetchTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
       setSelectedTicket(prev => prev ? { ...prev, status: 'closed' } : null)
     } catch (err) {
       console.error('Error closing ticket:', err)
@@ -419,6 +470,7 @@ export default function Marketplace({ user, onLogout }) {
       playClose()
       setSelectedTicket(null)
       await fetchTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
     } catch (err) {
       console.error('Error unclaiming ticket:', err)
       alert('Failed to unclaim ticket')
@@ -653,9 +705,8 @@ export default function Marketplace({ user, onLogout }) {
               </div>
 
               <button
-                className={`mp-modal-submit ${
-                  modalOpen === 'request' ? 'request-submit' : 'seller-submit'
-                }`}
+                className={`mp-modal-submit ${modalOpen === 'request' ? 'request-submit' : 'seller-submit'
+                  }`}
                 onClick={handleSubmit}
                 id="modal-submit-btn"
               >
@@ -732,7 +783,7 @@ export default function Marketplace({ user, onLogout }) {
                     <span className="mp-detail-claimed-sub">You claimed this ticket.</span>
                   ) : (
                     <span className="mp-detail-claimed-sub">
-                        <NameTag username={selectedTicket.claimantUser || 'Someone'} realName={selectedTicket.claimantRollno ? studentNames?.[selectedTicket.claimantRollno] : null} className="mp-detail-nametag"><strong>@{selectedTicket.claimantUser || 'Someone'}</strong></NameTag> already grabbed this one.
+                      <NameTag username={selectedTicket.claimantUser || 'Someone'} realName={selectedTicket.claimantRollno ? studentNames?.[selectedTicket.claimantRollno] : null} className="mp-detail-nametag"><strong>@{selectedTicket.claimantUser || 'Someone'}</strong></NameTag> already grabbed this one.
                     </span>
                   )}
                 </div>

@@ -134,3 +134,7 @@ ON CONFLICT (ticketid) DO NOTHING;
 
 -- Ensure sequence is updated
 SELECT setval('public."TicketTable_ticketid_seq"', COALESCE((SELECT MAX(ticketid) FROM public."TicketTable") + 1, 1), false);
+
+-- Enable real-time for tickets
+ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTable";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTableData";
