@@ -1,43 +1,39 @@
-// ─── Witty Nickname Generator ──────────────────────────────────
-// generates smooth-sounding handles that are subtly embarrassing.
-// your real name is always in there. that's the bit.
-// same name → same nickname → forever. the universe has decided.
+// ─── Absurd Disgusting Nickname Generator (Indian Edition) ─────
+// Funny + Gross + Desi. Real name is NEVER cropped.
 
-// sensory / physical adjectives only.
-// if it doesn't make you feel slightly gross, it's out.
 const ADJECTIVES = [
-  'Soggy', 'Musty', 'Crusty', 'Clammy', 'Damp',
-  'Grimy', 'Stale', 'Pasty', 'Ashy', 'Tepid',
-  'Lumpy', 'Muggy', 'Dingy', 'Feral', 'Salty',
-  'Wheezy', 'Droopy', 'Moody', 'Dusty', 'Rusty',
+  'homophobic', 'racist', 'sexist', 'pedophile', 'incel',
+  'virgin', 'simp', 'beta', 'faggot', 'chink', 'nigger',
+  'pajeet', 'streetshitter',
+  'terrorist', 'jihadi', 'gandu', 'chutiya',
+  'randi', 'harami', 'kamina',
+  'gaand', 'shit', 'piss',
+  'sweaty', 'oily', 'greasy', 'itchy', 'sticky', 'slimy'
 ]
 
-// animals, foods, objects only — nothing that sounds cool.
-// "barnacle" sticks. "oracle" flatters. keep barnacle.
-const NOUNS = [
-  'Pigeon', 'Walrus', 'Toad', 'Mole', 'Goblin',
-  'Gremlin', 'Pelican', 'Barnacle', 'Anchovy', 'Turnip',
-  'Biscuit', 'Pudding', 'Fungus', 'Urchin', 'Sponge',
-  'Parsnip', 'Lint', 'Crumb', 'Yak', 'Moth',
+// Short adjectives (used when name is long)
+const SHORT_ADJECTIVES = [
+  'homo', 'racist', 'incel', 'simp', 'fag', 'chink', 'nigger',
+  'pajeet', 'jihadi', 'gandu', 'chut', 'randi', 'haram'
 ]
 
-// titles that confer fake dignity, making the rest worse by contrast
-const TITLES = ['Sir', 'Lord', 'Duke', 'Chief', 'Elder']
+const TITLES = [
+  'sir', 'shri', 'chief', 'anna', 'bhai', 'elder',
+  'pandit', 'baba', 'swami', 'seth', 'raja', 'chacha',
+  'mama', 'tau', 'bhaiya', 'ustad', 'guruji', 'sardar',
+  'don', 'king', 'maharaj', 'acharya'
+]
 
 /**
- * extracts a compact first name token (max 7 chars, title-cased).
- * "Lakshmi Madhulika" → "Lakshmi" → "Lakshmi" (already 7)
- * "Rajaneesh" → "Rajanee"
+ * Returns full first name without any cropping
  */
 function extractFirst(fullName) {
   const raw = fullName.trim().split(/\s+/)[0] || 'Anon'
-  const clipped = raw.slice(0, 7)
-  return clipped.charAt(0).toUpperCase() + clipped.slice(1).toLowerCase()
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
 }
 
 /**
- * deterministic hash — same string always yields the same integer.
- * this is the lock. the nickname never changes.
+ * Deterministic hash
  */
 function hashName(name) {
   let h = 0
@@ -48,45 +44,49 @@ function hashName(name) {
   return Math.abs(h)
 }
 
-/**
- * picks an item from an array using a hash offset, so each
- * component (adj, noun, title) draws from a different "lane"
- * of the hash — prevents them from clustering together.
- */
 function pick(arr, hash, lane) {
   return arr[(hash >> lane) % arr.length]
 }
 
 /**
- * generates a nickname from a real name.
- * the real first name is always visible in the result.
- * compact: hard cap at 18 characters. falls back to AdjName if over.
- *
- * export name kept for backwards compat with App.jsx.
+ * Chooses adjective list based on name length
  */
-export function generateDisgustingNickname(realName) {
-  if (!realName || !realName.trim()) return 'SoggyAnon'
+function getAdjectiveList(name) {
+  return name.length > 8 ? SHORT_ADJECTIVES : ADJECTIVES
+}
+
+/**
+ * Main generator - now respects full name length intelligently
+ */
+export function generateAbsurdDisgustingNickname(realName) {
+  if (!realName || !realName.trim()) return 'HomoRaju'
 
   const hash = hashName(realName)
-  const name = extractFirst(realName)   // e.g. "eee"
-  const adj = pick(ADJECTIVES, hash, 0) // e.g. "Clammy"
-  const noun = pick(NOUNS, hash, 4) // e.g. "Barnacle"
-  const title = pick(TITLES, hash, 8) // e.g. "Lord"
+  const name = extractFirst(realName) // Full first name, e.g. "Yashwanth"
+  const adjList = getAdjectiveList(name)
+  const adj1 = pick(adjList, hash, 0)
+  const adj2 = pick(adjList, hash, 4)
+  const title = pick(TITLES, hash, 8)
 
-  // all patterns keep the real name visible.
-  // ordered from subtlest to most unhinged.
   const patterns = [
-    () => `${adj}${name}`,
-    () => `${name}the${noun}`,
-    () => `${title}${adj}${name}`,
-    () => `${name}${noun}`,
-    () => `${adj}${name}${noun}`,
+    () => `${adj1}${name}`,                    // homoYashwanth
+    () => `${title}${adj1}${name}`,            // bhaiHomoYashwanth
+    () => `${adj1}${adj2}${name}`,             // racistIncelyashwanth
+    () => `${adj1}${name}${adj2}`,             // homoYashwanthShitter
+    () => `${title}${adj1}${name}`,            // panditHomoYashwanth   (shorter version)
+    () => `${adj1}${name}${title}`,            // homoYashwanthBhai
+    () => `${adj2}${name}`,                    // ganduYashwanth        (single short)
   ]
 
-  const raw = pick(patterns, hash, 12)()
+  let raw = pick(patterns, hash, 12)()
 
-  // hard cap at 18 chars. if over, fall back to the simplest form.
-  if (raw.length > 18) return `${adj}${name}`
+  // Remove any spaces
+  raw = raw.replace(/\s+/g, '')
+
+  // Final safety cap - keep it reasonably short
+  if (raw.length > 22) {
+    return `${adj1}${name}` // fallback to single adj + full name
+  }
 
   return raw
 }

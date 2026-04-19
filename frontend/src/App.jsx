@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
 import { Lock, User, AlertCircle, Sparkles, PartyPopper } from 'lucide-react'
 import confetti from 'canvas-confetti'
-import { generateDisgustingNickname } from './nicknameGenerator'
+import { generateAbsurdDisgustingNickname } from './nicknameGenerator'
 import Marketplace from './Marketplace'
 import {
   initAudio, playSuccess, playError, playClick, playPop,
@@ -248,7 +248,7 @@ function App() {
         const realName = studentData.first_name
 
         // 2. Generate the nickname
-        const nickname = generateDisgustingNickname(realName)
+        const nickname = generateAbsurdDisgustingNickname(realName)
 
         // 3. Create the user in UserTable
         const newUser = {
