@@ -4,6 +4,7 @@ import { Lock, User, AlertCircle, Sparkles, PartyPopper } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { generateAbsurdDisgustingNickname } from './nicknameGenerator'
 import Marketplace from './Marketplace'
+import AdminPanel from './AdminPanel'
 import {
   initAudio, playSuccess, playError, playClick, playPop,
   playRevealIntro, playRevealCeremony, playRevealSlam,
@@ -331,8 +332,21 @@ function App() {
     )
   }
 
-  // If user is logged in, show the marketplace full-screen
+  // If user is logged in, route admin vs regular user
   if (user) {
+    if (user.rollno === '9999') {
+      return (
+        <AdminPanel
+          user={user}
+          onLogout={() => {
+            setUser(null)
+            setRollno('')
+            setPassword('')
+            localStorage.removeItem('jj_user')
+          }}
+        />
+      )
+    }
     return (
       <Marketplace
         user={user}

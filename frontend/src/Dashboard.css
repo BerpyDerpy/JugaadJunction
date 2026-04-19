@@ -433,3 +433,163 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+/* ---------- complaint nav button accent ---------- */
+.db-nav-complaint {
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+}
+
+.db-nav-complaint:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #fca5a5 !important;
+}
+
+/* ---------- complaint modal overlay ---------- */
+.db-complaint-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(20, 10, 5, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: dbOverlayIn 0.2s ease;
+}
+
+/* ---------- complaint modal card ---------- */
+.db-complaint-modal {
+  width: 100%;
+  max-width: 460px;
+  background: #3d2013;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E");
+  border: 1.5px solid rgba(239, 68, 68, 0.25);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(245, 230, 211, 0.05);
+  animation: dbSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes complaintSlideIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.db-complaint-close {
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  left: auto !important;
+}
+
+.db-complaint-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.db-complaint-header h3 {
+  font-family: 'Caveat', cursive;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f5e6d3;
+}
+
+.db-complaint-header-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.db-complaint-subtitle {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 15px;
+  color: #a38568;
+  margin-bottom: 24px;
+  letter-spacing: 0.3px;
+}
+
+.db-complaint-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.db-complaint-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.db-complaint-field label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #a38568;
+}
+
+.db-complaint-input,
+.db-complaint-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(245, 230, 211, 0.12);
+  background: rgba(245, 230, 211, 0.06);
+  color: #f5e6d3;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.25s ease;
+  resize: vertical;
+}
+
+.db-complaint-input::placeholder,
+.db-complaint-textarea::placeholder {
+  color: #8b7355;
+}
+
+.db-complaint-input:focus,
+.db-complaint-textarea:focus {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.db-complaint-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+  margin-top: 4px;
+}
+
+.db-complaint-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  background: linear-gradient(135deg, #f87171, #ef4444);
+}
+
+.db-complaint-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}

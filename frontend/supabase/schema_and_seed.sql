@@ -135,6 +135,22 @@ ON CONFLICT (ticketid) DO NOTHING;
 -- Ensure sequence is updated
 SELECT setval('public."TicketTable_ticketid_seq"', COALESCE((SELECT MAX(ticketid) FROM public."TicketTable") + 1, 1), false);
 
+-- Admin user for the admin panel
+INSERT INTO public."UserTable" (rollno, password, username, social_credit) VALUES
+('9999', 'oui', 'admin', 100)
+ON CONFLICT (rollno) DO NOTHING;
+
+-- ComplaintsTable Schema
+CREATE TABLE IF NOT EXISTS public."ComplaintsTable" (
+  id SERIAL PRIMARY KEY,
+  rollno VARCHAR(25) REFERENCES public."UserTable"(rollno),
+  subject VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(20) CHECK (status IN ('open', 'resolved')) DEFAULT 'open',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Enable real-time for tickets
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTable";
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTableData";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."ComplaintsTable";

@@ -11,6 +11,8 @@ import {
   Trash2,
   AlertTriangle,
   Undo2,
+  MessageSquareWarning,
+  Send,
 } from 'lucide-react'
 import React from 'react'
 import { playPop, playClose } from './sounds'
@@ -130,6 +132,12 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [studentNames, setStudentNames] = useState({})
   const [toast, setToast] = useState(null)
   const [unclaiming, setUnclaiming] = useState(false)
+
+  // complaint modal state
+  const [complaintOpen, setComplaintOpen] = useState(false)
+  const [complaintSubject, setComplaintSubject] = useState('')
+  const [complaintDesc, setComplaintDesc] = useState('')
+  const [submittingComplaint, setSubmittingComplaint] = useState(false)
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -264,6 +272,38 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     setTimeout(() => setToast(null), 3200)
   }
 
+  // ── Submit complaint handler ────────────────────────────────
+  const handleSubmitComplaint = async () => {
+    if (!complaintSubject.trim()) {
+      alert('Please enter a subject for your complaint.')
+      return
+    }
+    if (submittingComplaint) return
+    setSubmittingComplaint(true)
+    try {
+      const { error } = await supabase
+        .from('ComplaintsTable')
+        .insert({
+          rollno: user.rollno,
+          subject: complaintSubject.trim(),
+          description: complaintDesc.trim() || null,
+        })
+      if (error) throw error
+
+      playPop()
+      setComplaintOpen(false)
+      setComplaintSubject('')
+      setComplaintDesc('')
+      setToast('📬 Complaint filed successfully!')
+      setTimeout(() => setToast(null), 3200)
+    } catch (err) {
+      console.error('Error submitting complaint:', err)
+      alert('Failed to submit complaint')
+    } finally {
+      setSubmittingComplaint(false)
+    }
+  }
+
   // ── Unclaim ticket handler ──────────────────────────────────────
   const handleUnclaim = async (ticket) => {
     if (unclaiming) return
@@ -328,6 +368,14 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           >
             <ShoppingBag size={16} />
             <span>Marketplace</span>
+          </button>
+          <button
+            className="db-nav-btn db-nav-complaint"
+            onClick={() => { playPop(); setComplaintOpen(true) }}
+            id="nav-complaint"
+          >
+            <MessageSquareWarning size={16} />
+            <span>Complaint</span>
           </button>
         </div>
 
@@ -523,6 +571,81 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   )}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Complaint Modal ── */}
+      {complaintOpen && (
+        <div
+          className="db-complaint-overlay"
+          onClick={() => setComplaintOpen(false)}
+          id="complaint-modal-overlay"
+        >
+          <div
+            className="db-complaint-modal"
+            onClick={(e) => e.stopPropagation()}
+            id="complaint-modal"
+          >
+            <button
+              className="db-close-btn db-complaint-close"
+              onClick={() => setComplaintOpen(false)}
+              id="complaint-modal-close"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="db-complaint-header">
+              <MessageSquareWarning size={22} className="db-complaint-header-icon" />
+              <h3>File a Complaint</h3>
+            </div>
+            <p className="db-complaint-subtitle">
+              Something bugging you? Let the admins know.
+            </p>
+
+            <div className="db-complaint-form">
+              <div className="db-complaint-field">
+                <label htmlFor="complaint-subject">Subject</label>
+                <input
+                  id="complaint-subject"
+                  type="text"
+                  placeholder="What's the issue about?"
+                  value={complaintSubject}
+                  onChange={(e) => setComplaintSubject(e.target.value)}
+                  className="db-complaint-input"
+                  maxLength={255}
+                />
+              </div>
+              <div className="db-complaint-field">
+                <label htmlFor="complaint-desc">Description (optional)</label>
+                <textarea
+                  id="complaint-desc"
+                  placeholder="Give us the full story…"
+                  value={complaintDesc}
+                  onChange={(e) => setComplaintDesc(e.target.value)}
+                  className="db-complaint-textarea"
+                  rows={4}
+                />
+              </div>
+              <button
+                className="db-complaint-submit"
+                onClick={handleSubmitComplaint}
+                disabled={submittingComplaint || !complaintSubject.trim()}
+                id="complaint-submit-btn"
+              >
+                {submittingComplaint ? (
+                  <>
+                    <div className="mp-detail-btn-spinner" />
+                    Submitting…
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Submit Complaint
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
