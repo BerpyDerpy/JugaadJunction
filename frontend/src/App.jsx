@@ -1,39 +1,90 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
-import { Lock, User, AlertCircle, Hexagon, Sparkles, PartyPopper } from 'lucide-react'
+import { Lock, User, AlertCircle, Sparkles, PartyPopper } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { generateDisgustingNickname } from './nicknameGenerator'
 import Marketplace from './Marketplace'
+import {
+  initAudio, playSuccess, playError, playClick, playPop,
+  playRevealIntro, playRevealCeremony, playRevealSlam,
+  playRevealQuip, playRevealWarning, playRevealReady,
+} from './sounds'
+
+// ─── Quip pool for the welcome reveal ───────────────────────────
+const QUIPS = [
+  "Your parents chose carefully. We did not.",
+  "This name will haunt your leaderboard forever.",
+  "Complaints can be filed at /dev/null.",
+  "Your reputation starts now. No pressure.",
+  "We ran it through a very sophisticated algorithm. (We didn't.)",
+  "This is permanent. Like a tattoo, but worse.",
+  "Legend says the last person who complained got a worse one.",
+  "Your dignity called. It said goodbye.",
+  "On the bright side, at least it's memorable.",
+  "Think of it as a personality test you didn't study for.",
+  "We considered your feelings. Then we ignored them.",
+]
 
 // ─── Welcome Reveal Screen ─────────────────────────────────────
 function WelcomeReveal({ realName, nickname, onContinue }) {
   const containerRef = useRef(null)
-  const [phase, setPhase] = useState(0) // 0=name, 1=nickname, 2=notice, 3=button
+  const contentRef = useRef(null)
+  // 0=intro, 1=realname, 2=ceremony, 3=nickname+slam, 4=quip, 5=notice, 6=button
+  const [phase, setPhase] = useState(0)
+  const [showFlash, setShowFlash] = useState(false)
+  const [shaking, setShaking] = useState(false)
+
+  // pick a deterministic quip based on the nickname
+  const quipIndex = nickname
+    ? Math.abs([...nickname].reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % QUIPS.length
+    : 0
+  const quip = QUIPS[quipIndex]
 
   useEffect(() => {
-    // Stagger the reveals
-    const t1 = setTimeout(() => setPhase(1), 800)
-    const t2 = setTimeout(() => {
+    const timers = []
+
+    // Phase 0: intro shimmer
+    timers.push(setTimeout(() => playRevealIntro(), 200))
+
+    // Phase 1: real name appears (0.8s)
+    timers.push(setTimeout(() => setPhase(1), 800))
+
+    // Phase 2: ceremony text (2.2s)
+    timers.push(setTimeout(() => {
       setPhase(2)
-      // CONFETTI EXPLOSION 🎉
+      playRevealCeremony()
+    }, 2200))
+
+    // Phase 3: THE NAME SLAMS IN (3.5s)
+    timers.push(setTimeout(() => {
+      setPhase(3)
+      setShowFlash(true)
+      setShaking(true)
+      playRevealSlam()
+
+      // screen flash fades
+      setTimeout(() => setShowFlash(false), 400)
+      setTimeout(() => setShaking(false), 500)
+
+      // confetti explosion
       const duration = 3000
       const end = Date.now() + duration
 
       const frame = () => {
         confetti({
-          particleCount: 4,
+          particleCount: 5,
           angle: 60,
           spread: 55,
           origin: { x: 0, y: 0.7 },
-          colors: ['#a855f7', '#ec4899', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'],
+          colors: ['#d97706', '#f59e0b', '#b45309', '#f5e6d3', '#ef4444', '#22c55e'],
           gravity: 0.8,
         })
         confetti({
-          particleCount: 4,
+          particleCount: 5,
           angle: 120,
           spread: 55,
           origin: { x: 1, y: 0.7 },
-          colors: ['#a855f7', '#ec4899', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'],
+          colors: ['#d97706', '#f59e0b', '#b45309', '#f5e6d3', '#ef4444', '#22c55e'],
           gravity: 0.8,
         })
 
@@ -43,69 +94,101 @@ function WelcomeReveal({ realName, nickname, onContinue }) {
       }
       frame()
 
-      // Big center burst
+      // big center burst
       confetti({
-        particleCount: 150,
-        spread: 100,
+        particleCount: 180,
+        spread: 120,
         origin: { x: 0.5, y: 0.5 },
-        colors: ['#a855f7', '#ec4899', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'],
-        startVelocity: 45,
+        colors: ['#d97706', '#f59e0b', '#b45309', '#faf3e8', '#ef4444'],
+        startVelocity: 50,
         gravity: 1.2,
         ticks: 200,
-        scalar: 1.2,
+        scalar: 1.3,
       })
-    }, 2000)
-    const t3 = setTimeout(() => setPhase(3), 3200)
+    }, 3500))
 
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    // Phase 4: quip appears (5.2s)
+    timers.push(setTimeout(() => {
+      setPhase(4)
+      playRevealQuip()
+    }, 5200))
+
+    // Phase 5: the ominous notice (6.5s)
+    timers.push(setTimeout(() => {
+      setPhase(5)
+      playRevealWarning()
+    }, 6500))
+
+    // Phase 6: button (7.5s)
+    timers.push(setTimeout(() => {
+      setPhase(6)
+      playRevealReady()
+    }, 7500))
+
+    return () => timers.forEach(clearTimeout)
   }, [])
 
   return (
     <div className="welcome-reveal" ref={containerRef} id="welcome-reveal">
-      {/* Drifting blobby background */}
+      {/* flash overlay on name slam */}
+      {showFlash && <div className="welcome-flash" />}
+
+      {/* drifting warm blobs */}
       <div className="welcome-blobs">
         <div className="welcome-blob blob-1" />
         <div className="welcome-blob blob-2" />
         <div className="welcome-blob blob-3" />
       </div>
 
-      <div className="welcome-content">
-        {/* Phase 0: Real name */}
+      <div className={`welcome-content ${shaking ? 'shaking' : ''}`} ref={contentRef}>
+        {/* Phase 0: Intro text */}
         <div className={`welcome-line welcome-greeting ${phase >= 0 ? 'visible' : ''}`}>
-          <span className="welcome-emoji">👋</span>
-          <span>Welcome, {realName}</span>
+          <span className="welcome-emoji">👀</span>
+          <span>Ah, a new face appears...</span>
         </div>
 
-        <div className={`welcome-line welcome-real-name ${phase >= 0 ? 'visible' : ''}`}>
+        {/* Phase 1: Real name reveal */}
+        <div className={`welcome-line welcome-real-name ${phase >= 1 ? 'visible' : ''}`}>
           {realName}
         </div>
 
-        {/* Phase 1: Nickname reveal */}
-        <div className={`welcome-divider ${phase >= 1 ? 'visible' : ''}`} />
+        {/* Phase 2: Ceremony text */}
+        <div className={`welcome-divider ${phase >= 2 ? 'visible' : ''}`} />
 
-        <div className={`welcome-line welcome-identity-label ${phase >= 1 ? 'visible' : ''}`}>
-          <Sparkles size={18} className="welcome-sparkle" />
+        <div className={`welcome-ceremony-label ${phase >= 2 ? 'visible' : ''}`}>
+          The Sorting Ceremony has spoken...
+        </div>
+
+        <div className={`welcome-line welcome-identity-label ${phase >= 2 ? 'visible' : ''}`}>
+          <Sparkles size={16} className="welcome-sparkle" />
           Your new identity is
         </div>
 
-        <div className={`welcome-line welcome-nickname ${phase >= 1 ? 'visible' : ''}`}>
+        {/* Phase 3: THE NICKNAME slams in */}
+        <div className={`welcome-line welcome-nickname ${phase >= 3 ? 'visible' : ''}`}>
           {nickname}
         </div>
 
-        {/* Phase 2: The notice */}
-        <div className={`welcome-notice ${phase >= 2 ? 'visible' : ''}`}>
-          <span className="welcome-notice-icon">⚠️</span>
-          <span>You cannot change this btw</span>
+        {/* Phase 4: Humorous quip */}
+        <div className={`welcome-quip ${phase >= 4 ? 'visible' : ''}`}>
+          <span className="welcome-quip-icon"></span>
+          {quip}
         </div>
 
-        {/* Phase 3: Continue button */}
+        {/* Phase 5: The ominous notice */}
+        <div className={`welcome-notice ${phase >= 5 ? 'visible' : ''}`}>
+          <span className="welcome-notice-icon"></span>
+          <span>You cannot change this btw :) </span>
+        </div>
+
+        {/* Phase 6: Continue button */}
         <button
-          className={`welcome-continue-btn ${phase >= 3 ? 'visible' : ''}`}
-          onClick={onContinue}
+          className={`welcome-continue-btn ${phase >= 6 ? 'visible' : ''}`}
+          onClick={() => { playPop(); onContinue() }}
           id="welcome-continue-btn"
         >
           <PartyPopper size={20} />
-          Enter the Bazaar
+          Enter the Marketplace
         </button>
       </div>
     </div>
@@ -164,7 +247,7 @@ function App() {
 
         const realName = studentData.first_name
 
-        // 2. Generate the disgusting nickname
+        // 2. Generate the nickname
         const nickname = generateDisgustingNickname(realName)
 
         // 3. Create the user in UserTable
@@ -212,6 +295,7 @@ function App() {
 
         // Note: Storing plain passwords ain't secure, but keeping it simple as per schema!
         if (data && data.password === password) {
+          playSuccess()
           setUser(data)
           localStorage.setItem('jj_user', JSON.stringify(data))
         } else {
@@ -219,6 +303,7 @@ function App() {
         }
       }
     } catch (err) {
+      playError()
       setError(err.message)
     } finally {
       setLoading(false)
@@ -263,7 +348,7 @@ function App() {
 
   return (
     <div className="login-container">
-      {/* Background animated geometric elements */}
+      {/* warm floating blobs */}
       <div className="background-spheres">
         <div className="sphere sphere-1"></div>
         <div className="sphere sphere-2"></div>
@@ -273,13 +358,13 @@ function App() {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo-container">
-            <Hexagon className="login-logo" strokeWidth={2.5} />
+            📌
           </div>
           <h1 className="login-title">Jugaad Junction</h1>
-          <p className="login-subtitle">Student Resource Portal</p>
+          <p className="login-subtitle">The unofficial exchange of all things essential</p>
         </div>
 
-        <form className="login-form" onSubmit={handleAuth}>
+        <form className="login-form" onSubmit={(e) => { initAudio(); handleAuth(e) }}>
           {error && (
             <div className="error-message">
               <AlertCircle size={18} />

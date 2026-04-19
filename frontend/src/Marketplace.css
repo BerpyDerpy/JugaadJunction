@@ -341,37 +341,40 @@
   background: #d97706;
 }
 
-/* ---------- Tooltips for Real Name --------- */
-.mp-tooltip-container {
+/* ---------- NameTag – tap-friendly username tooltips ---------- */
+.mp-nametag {
   position: relative;
   display: inline-block;
-  cursor: help;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mp-tooltip {
+.mp-nametag-tip {
   visibility: hidden;
   width: max-content;
+  max-width: 200px;
   background-color: #2c1e10;
   color: #f5e6d3;
   text-align: center;
-  border-radius: 6px;
-  padding: 5px 10px;
+  border-radius: 8px;
+  padding: 6px 12px;
   position: absolute;
   z-index: 500;
-  bottom: 125%; /* Position above */
+  bottom: 125%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(4px);
   opacity: 0;
-  transition: opacity 0.2s, bottom 0.2s;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   font-family: 'Outfit', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   pointer-events: none;
+  white-space: nowrap;
 }
 
-/* Tooltip arrow */
-.mp-tooltip::after {
+/* arrow */
+.mp-nametag-tip::after {
   content: "";
   position: absolute;
   top: 100%;
@@ -382,10 +385,36 @@
   border-color: #2c1e10 transparent transparent transparent;
 }
 
-.mp-tooltip-container:hover .mp-tooltip {
+/* desktop: show on hover */
+@media (hover: hover) and (pointer: fine) {
+  .mp-nametag:hover .mp-nametag-tip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* mobile + desktop: show on tap (active state) */
+.mp-nametag-active .mp-nametag-tip {
   visibility: visible;
   opacity: 1;
-  bottom: 135%;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* slight underline hint that it's tappable */
+.mp-nametag > strong,
+.mp-nametag:not(:has(strong)) {
+  border-bottom: 1px dashed rgba(139, 115, 85, 0.3);
+}
+
+/* in detail popup, override for inline nametags */
+.mp-detail-nametag {
+  cursor: pointer;
+}
+
+.mp-detail-nametag > strong {
+  border-bottom: 1px dashed rgba(139, 115, 85, 0.35);
 }
 
 /* status badges */

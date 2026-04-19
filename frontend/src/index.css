@@ -1,16 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Patrick+Hand&display=swap');
 
 :root {
   font-family: 'Outfit', sans-serif;
-  --bg-gradient-start: #0f172a;
-  --bg-gradient-end: #3b0764;
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-color: #a855f7;
-  --accent-hover: #c084fc;
-  --input-bg: rgba(15, 23, 42, 0.4);
+  /* warm cork palette */
+  --bg-cork: #5c3d2e;
+  --bg-dark: #2a1810;
+  --paper: #faf3e8;
+  --paper-shadow: rgba(0, 0, 0, 0.22);
+  --text-dark: #2c1e10;
+  --text-mid: #6b5540;
+  --text-light: #a38568;
+  --text-cream: #f5e6d3;
+  --accent: #d97706;
+  --accent-hover: #e58a0a;
+  --accent-glow: rgba(217, 119, 6, 0.35);
+  --border-dashed: rgba(139, 115, 85, 0.3);
+  --input-bg: rgba(255, 255, 255, 0.6);
 }
 
 * {
@@ -21,8 +26,10 @@
 
 body {
   margin: 0;
-  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-  color: var(--text-primary);
+  background: var(--bg-cork);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.12'/%3E%3C/svg%3E");
+  color: var(--text-cream);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -35,6 +42,10 @@ body {
   width: 100%;
 }
 
+/* ============================================
+   LOGIN PAGE – Cork Board Aesthetic
+   ============================================ */
+
 .login-container {
   display: flex;
   align-items: center;
@@ -45,6 +56,17 @@ body {
   padding: 20px;
 }
 
+/* soft vignette overlay matching marketplace */
+.login-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(30, 15, 8, 0.55) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── floating warm blobs ── */
 .background-spheres {
   position: absolute;
   top: 0;
@@ -58,38 +80,94 @@ body {
 .sphere {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(168, 85, 247, 0.4), rgba(59, 7, 100, 0));
-  filter: blur(40px);
+  filter: blur(60px);
   animation: float 10s infinite ease-in-out alternate;
 }
 
-.sphere-1 { width: 300px; height: 300px; top: -50px; left: -50px; animation-delay: 0s; }
-.sphere-2 { width: 400px; height: 400px; bottom: -100px; right: -50px; animation-delay: -3s; background: radial-gradient(circle at 30% 30%, rgba(56, 189, 248, 0.3), rgba(15, 23, 42, 0)); }
-.sphere-3 { width: 200px; height: 200px; top: 40%; left: 60%; animation-delay: -6s; background: radial-gradient(circle at 30% 30%, rgba(236, 72, 153, 0.3), rgba(15, 23, 42, 0)); }
+.sphere-1 {
+  width: 300px;
+  height: 300px;
+  top: -50px;
+  left: -50px;
+  background: radial-gradient(circle at 30% 30%, rgba(217, 119, 6, 0.35), transparent);
+  animation-delay: 0s;
+}
+
+.sphere-2 {
+  width: 400px;
+  height: 400px;
+  bottom: -100px;
+  right: -50px;
+  background: radial-gradient(circle at 30% 30%, rgba(180, 83, 9, 0.3), transparent);
+  animation-delay: -3s;
+}
+
+.sphere-3 {
+  width: 200px;
+  height: 200px;
+  top: 40%;
+  left: 60%;
+  background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.25), transparent);
+  animation-delay: -6s;
+}
 
 @keyframes float {
   0% { transform: translateY(0) scale(1); }
   100% { transform: translateY(30px) scale(1.1); }
 }
 
+/* ── paper card ── */
 .login-card {
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 420px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: 24px;
+  background: var(--paper);
+  border-radius: 6px;
   padding: 40px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  animation: fadeIn 0.8s ease-out forwards;
+  box-shadow:
+    2px 4px 12px var(--paper-shadow),
+    inset 0 0 40px rgba(200, 180, 150, 0.12);
+  animation: cardDrop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  color: var(--text-dark);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+/* decorative tape on the card */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffa726, #e65100);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  z-index: 3;
+}
+
+/* tape strip decoration */
+.login-card::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 24px;
+  width: 55px;
+  height: 16px;
+  background: rgba(255, 235, 165, 0.55);
+  transform: rotate(3deg);
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+@keyframes cardDrop {
+  from { opacity: 0; transform: translateY(-30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .login-header {
@@ -97,59 +175,65 @@ body {
   margin-bottom: 32px;
 }
 
+/* ── pushpin logo ── */
 .login-logo-container {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, #a855f7, #ec4899);
-  border-radius: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.5);
-  animation: pulse 3s infinite;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 20px;
+  font-size: 36px;
+  line-height: 1;
+  animation: pinBounce 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
-  70% { box-shadow: 0 0 0 15px rgba(168, 85, 247, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+@keyframes pinBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(3deg); }
+  75% { transform: translateY(-2px) rotate(-2deg); }
 }
 
 .login-logo {
-  color: white;
+  color: var(--accent);
   width: 32px;
   height: 32px;
 }
 
 .login-title {
-  font-size: 28px;
+  font-family: 'Caveat', cursive;
+  font-size: 36px;
   font-weight: 700;
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  color: var(--text-dark);
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .login-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-family: 'Patrick Hand', cursive;
+  font-size: 15px;
+  color: var(--text-light);
+  letter-spacing: 0.3px;
 }
 
+/* ── form ── */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .form-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -163,7 +247,7 @@ body {
 .input-icon {
   position: absolute;
   left: 14px;
-  color: var(--text-secondary);
+  color: var(--text-light);
   width: 18px;
   height: 18px;
   transition: color 0.3s ease;
@@ -171,45 +255,47 @@ body {
 
 .form-input {
   width: 100%;
-  padding: 14px 14px 14px 40px;
+  padding: 13px 14px 13px 40px;
   background: var(--input-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  color: var(--text-primary);
-  font-family: inherit;
+  border: 1.5px solid var(--border-dashed);
+  border-radius: 8px;
+  color: var(--text-dark);
+  font-family: 'Outfit', sans-serif;
   font-size: 15px;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   outline: none;
 }
 
 .form-input::placeholder {
-  color: #64748b;
+  color: var(--text-light);
 }
 
 .form-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .form-input:focus + .input-icon,
 .input-wrapper:focus-within .input-icon {
-  color: var(--accent-color);
+  color: var(--accent);
 }
 
+/* ── submit button ── */
 .submit-btn {
-  margin-top: 10px;
+  margin-top: 8px;
   padding: 14px;
-  background: linear-gradient(135deg, var(--accent-color), #ec4899);
+  background: linear-gradient(135deg, var(--accent), #b45309);
   color: white;
   border: none;
-  border-radius: 12px;
-  font-family: inherit;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 16px var(--accent-glow);
 }
 
 .submit-btn::before {
@@ -225,7 +311,8 @@ body {
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px -10px rgba(236, 72, 153, 0.5);
+  box-shadow: 0 8px 24px var(--accent-glow);
+  background: linear-gradient(135deg, var(--accent-hover), var(--accent));
 }
 
 .submit-btn:hover::before {
@@ -242,10 +329,11 @@ body {
   transform: none;
 }
 
+/* ── error message ── */
 .error-message {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  color: #dc2626;
   padding: 12px;
   border-radius: 8px;
   font-size: 14px;
@@ -265,28 +353,29 @@ body {
 .success-message {
   background: rgba(34, 197, 94, 0.1);
   border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #86efac;
+  color: #16a34a;
   padding: 24px;
   border-radius: 12px;
   text-align: center;
-  animation: fadeIn 0.5s ease;
+  animation: cardDrop 0.5s ease;
 }
 
 .user-card {
   margin-top: 16px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(255, 255, 255, 0.4);
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: left;
-  border: 1px solid var(--glass-border);
+  border: 1.5px solid var(--border-dashed);
 }
 
 .user-card-item {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px dashed var(--border-dashed);
   padding-bottom: 8px;
+  color: var(--text-dark);
 }
 .user-card-item:last-child {
   border-bottom: none;
@@ -296,14 +385,14 @@ body {
 
 .credit-score {
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--accent);
 }
 
 .auth-toggle {
   text-align: center;
   margin-top: 10px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-light);
 }
 
 .auth-toggle span {
@@ -312,7 +401,7 @@ body {
 }
 
 .auth-toggle span:hover {
-  color: var(--accent-hover);
+  color: var(--accent);
   text-decoration: underline;
 }
 
@@ -338,7 +427,7 @@ body {
 }
 
 /* ============================================
-   WELCOME REVEAL SCREEN
+   WELCOME REVEAL SCREEN – Warm Cork Spectacle
    ============================================ */
 .welcome-reveal {
   position: fixed;
@@ -347,12 +436,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 30%, #0d1117 70%, #150520 100%);
+  background: linear-gradient(135deg, #1a0e08 0%, #2a1810 30%, #3d2013 60%, #1a0e08 100%);
   overflow: hidden;
   font-family: 'Outfit', sans-serif;
 }
 
-/* ── Floating background blobs ── */
+/* ── Floating background blobs (warm tones) ── */
 .welcome-blobs {
   position: absolute;
   inset: 0;
@@ -364,14 +453,14 @@ body {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.4;
+  opacity: 0.45;
   animation: blobDrift 12s infinite ease-in-out alternate;
 }
 
 .blob-1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.6), transparent 70%);
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.6), transparent 70%);
   top: -10%;
   left: -10%;
   animation-delay: 0s;
@@ -380,7 +469,7 @@ body {
 .blob-2 {
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.5), transparent 70%);
+  background: radial-gradient(circle, rgba(180, 83, 9, 0.5), transparent 70%);
   bottom: -15%;
   right: -10%;
   animation-delay: -4s;
@@ -409,7 +498,7 @@ body {
   z-index: 1;
   text-align: center;
   padding: 40px;
-  max-width: 600px;
+  max-width: 640px;
   width: 100%;
 }
 
@@ -429,14 +518,15 @@ body {
 
 /* ── Greeting line ── */
 .welcome-greeting {
-  font-size: 24px;
-  color: #94a3b8;
+  font-size: 20px;
+  color: #a38568;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   letter-spacing: 0.5px;
+  font-family: 'Patrick Hand', cursive;
 }
 
 .welcome-emoji {
@@ -455,13 +545,14 @@ body {
 
 /* ── Real name ── */
 .welcome-real-name {
-  font-size: 52px;
+  font-family: 'Caveat', cursive;
+  font-size: 56px;
   font-weight: 700;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+  background: linear-gradient(135deg, #f5e6d3 0%, #d4b896 50%, #a38568 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   line-height: 1.2;
   margin-bottom: 28px;
   text-shadow: none;
@@ -472,7 +563,7 @@ body {
   width: 0;
   height: 2px;
   margin: 0 auto 28px;
-  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.6), rgba(236, 72, 153, 0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(217, 119, 6, 0.7), rgba(245, 158, 11, 0.5), transparent);
   transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: 2px;
 }
@@ -481,18 +572,35 @@ body {
   width: 80%;
 }
 
+/* ── Ceremony label ── */
+.welcome-ceremony-label {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 18px;
+  color: #a38568;
+  margin-bottom: 8px;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 1px;
+}
+
+.welcome-ceremony-label.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ── Identity label ── */
 .welcome-identity-label {
-  font-size: 16px;
-  color: #64748b;
+  font-size: 14px;
+  color: #8b7355;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 500;
+  letter-spacing: 2.5px;
+  font-weight: 600;
 }
 
 .welcome-sparkle {
@@ -508,19 +616,20 @@ body {
   100% { transform: rotate(0deg) scale(1); }
 }
 
-/* ── The Disgusting Nickname ── */
+/* ── The Nickname – now the star of the show ── */
 .welcome-nickname {
-  font-size: 44px;
-  font-weight: 800;
-  margin-bottom: 32px;
+  font-family: 'Caveat', cursive;
+  font-size: 52px;
+  font-weight: 700;
+  margin-bottom: 24px;
   line-height: 1.2;
   background: linear-gradient(
     135deg,
-    #a855f7 0%,
-    #ec4899 25%,
-    #f59e0b 50%,
-    #22c55e 75%,
-    #3b82f6 100%
+    #f59e0b 0%,
+    #d97706 25%,
+    #f5e6d3 50%,
+    #d97706 75%,
+    #f59e0b 100%
   );
   background-size: 300% 300%;
   -webkit-background-clip: text;
@@ -537,22 +646,78 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-/* Glitch effect on the nickname */
+/* slam-in effect on the nickname */
 .welcome-nickname.visible {
   animation:
     nicknameGradient 3s ease infinite,
-    nicknameGlitch 0.4s ease-out 0.3s 1;
+    nameSlam 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s 1;
 }
 
-@keyframes nicknameGlitch {
-  0% { transform: translate(0); filter: blur(0); }
-  10% { transform: translate(-3px, 2px); filter: blur(2px); }
-  20% { transform: translate(3px, -2px); filter: blur(0); }
-  30% { transform: translate(-2px, -1px); filter: blur(1px); }
-  40% { transform: translate(2px, 1px); filter: blur(0); }
-  50% { transform: translate(-1px, 2px); filter: blur(1px); }
-  60% { transform: translate(1px, -1px); filter: blur(0); }
-  100% { transform: translate(0); filter: blur(0); }
+@keyframes nameSlam {
+  0% { transform: scale(2.5) rotate(-3deg); filter: blur(10px); opacity: 0; }
+  40% { transform: scale(0.95) rotate(1deg); filter: blur(0); opacity: 1; }
+  60% { transform: scale(1.05) rotate(-0.5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* subtle glow pulse behind the name */
+.welcome-nickname::after {
+  content: '';
+  position: absolute;
+  inset: -20px -40px;
+  background: radial-gradient(ellipse, rgba(217, 119, 6, 0.15) 0%, transparent 70%);
+  z-index: -1;
+  animation: glowPulse 2s ease-in-out infinite;
+  border-radius: 50%;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* ── Screen shake on name slam ── */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0); }
+  10% { transform: translate(-4px, 2px); }
+  20% { transform: translate(4px, -3px); }
+  30% { transform: translate(-3px, 1px); }
+  40% { transform: translate(2px, -2px); }
+  50% { transform: translate(-1px, 2px); }
+  60% { transform: translate(1px, -1px); }
+  80% { transform: translate(0); }
+}
+
+.welcome-content.shaking {
+  animation: screenShake 0.4s ease-in-out;
+}
+
+/* ── The humorous quip ── */
+.welcome-quip {
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 14px 24px;
+  margin: 0 auto 28px;
+  max-width: 420px;
+  border-radius: 10px;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1.5px solid rgba(217, 119, 6, 0.25);
+  font-family: 'Patrick Hand', cursive;
+  font-size: 17px;
+  color: #d4b896;
+  letter-spacing: 0.3px;
+  line-height: 1.5;
+}
+
+.welcome-quip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.welcome-quip-icon {
+  margin-right: 8px;
+  font-size: 18px;
 }
 
 /* ── The ominous notice ── */
@@ -564,15 +729,15 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 14px 24px;
-  margin: 0 auto 32px;
+  padding: 12px 20px;
+  margin: 0 auto 28px;
   max-width: 360px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  font-size: 15px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  font-size: 14px;
   font-weight: 600;
-  color: #fca5a5;
+  color: #ef9a9a;
   letter-spacing: 0.3px;
 }
 
@@ -591,10 +756,10 @@ body {
 }
 
 .welcome-notice-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
-/* ── Continue button ── */
+/* ── Continue button (warm themed) ── */
 .welcome-continue-btn {
   opacity: 0;
   transform: translateY(20px) scale(0.9);
@@ -604,16 +769,16 @@ body {
   gap: 10px;
   padding: 16px 36px;
   border: none;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #a855f7, #ec4899);
+  border-radius: 50px;
+  background: linear-gradient(135deg, #d97706, #b45309);
   color: white;
   font-family: 'Outfit', sans-serif;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   box-shadow:
-    0 10px 30px -5px rgba(168, 85, 247, 0.4),
-    0 0 0 0 rgba(168, 85, 247, 0);
+    0 10px 30px -5px rgba(217, 119, 6, 0.4),
+    0 0 0 0 rgba(217, 119, 6, 0);
   position: relative;
   overflow: hidden;
 }
@@ -621,6 +786,12 @@ body {
 .welcome-continue-btn.visible {
   opacity: 1;
   transform: translateY(0) scale(1);
+  animation: btnPulseGlow 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes btnPulseGlow {
+  0%, 100% { box-shadow: 0 10px 30px -5px rgba(217, 119, 6, 0.4), 0 0 0 0 rgba(217, 119, 6, 0.3); }
+  50% { box-shadow: 0 10px 30px -5px rgba(217, 119, 6, 0.5), 0 0 0 8px rgba(217, 119, 6, 0); }
 }
 
 .welcome-continue-btn::before {
@@ -637,8 +808,9 @@ body {
 .welcome-continue-btn:hover {
   transform: translateY(-3px) scale(1.03);
   box-shadow:
-    0 16px 40px -5px rgba(168, 85, 247, 0.5),
-    0 0 0 4px rgba(168, 85, 247, 0.15);
+    0 16px 40px -5px rgba(217, 119, 6, 0.5),
+    0 0 0 4px rgba(217, 119, 6, 0.15);
+  background: linear-gradient(135deg, #e58a0a, #d97706);
 }
 
 .welcome-continue-btn:hover::before {
@@ -649,18 +821,33 @@ body {
   transform: translateY(0) scale(1);
 }
 
+/* ── flash overlay on name slam ── */
+.welcome-flash {
+  position: fixed;
+  inset: 0;
+  background: rgba(245, 158, 11, 0.15);
+  pointer-events: none;
+  z-index: 10000;
+  animation: flashBurst 0.4s ease-out forwards;
+}
+
+@keyframes flashBurst {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .welcome-real-name {
-    font-size: 36px;
+    font-size: 38px;
   }
 
   .welcome-nickname {
-    font-size: 30px;
+    font-size: 34px;
   }
 
   .welcome-greeting {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .welcome-content {
@@ -670,5 +857,10 @@ body {
   .welcome-continue-btn {
     padding: 14px 28px;
     font-size: 16px;
+  }
+
+  .welcome-quip {
+    font-size: 15px;
+    padding: 12px 18px;
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './supabaseClient'
 import {
   Search,
@@ -18,7 +18,44 @@ import {
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import { usePushNotifications } from './usePushNotifications'
+import { playClick, playPop, playWhoosh, playSuccess, playError, playClaim, playClose } from './sounds'
 import './Marketplace.css'
+
+// ─── NameTag ────────────────────────────────────────────────────
+// shows username with real name on hover (desktop) or tap (mobile).
+// click-outside and scroll dismiss the tooltip.
+function NameTag({ username, realName, className, children }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // dismiss on outside click or scroll
+  useEffect(() => {
+    if (!open) return
+    const dismiss = () => setOpen(false)
+    document.addEventListener('click', dismiss, true)
+    document.addEventListener('scroll', dismiss, true)
+    return () => {
+      document.removeEventListener('click', dismiss, true)
+      document.removeEventListener('scroll', dismiss, true)
+    }
+  }, [open])
+
+  const handleTap = useCallback((e) => {
+    e.stopPropagation()
+    setOpen(prev => !prev)
+  }, [])
+
+  return (
+    <span
+      ref={ref}
+      className={`mp-nametag ${className || ''} ${open ? 'mp-nametag-active' : ''}`}
+      onClick={handleTap}
+    >
+      {children || `@${username}`}
+      <span className="mp-nametag-tip">{realName || 'Unknown'}</span>
+    </span>
+  )
+}
 
 // ─── Filter categories ──────────────────────────────────────────
 const CATEGORIES = [
@@ -79,10 +116,9 @@ function TicketCard({ ticket, index, type, onClick, studentNames }) {
       <span className="mp-ticket-category">{ticket.category}</span>
 
       <div className="mp-ticket-footer">
-        <span className="mp-ticket-user mp-tooltip-container">
+        <span className="mp-ticket-user">
           <span className="mp-ticket-user-dot" />
-          @{ticket.user}
-          <span className="mp-tooltip">{studentNames?.[ticket.ownerRollno] || 'Unknown'}</span>
+          <NameTag username={ticket.user} realName={studentNames?.[ticket.ownerRollno]} />
         </span>
         <span className={`mp-status ${ticket.status}`}>{ticket.status}</span>
       </div>
@@ -224,8 +260,10 @@ export default function Marketplace({ user, onLogout }) {
       if (metaError) throw metaError
 
       closeModal()
+      playSuccess()
       fetchTickets()
     } catch (err) {
+      playError()
       console.error("Error creating ticket:", err)
       alert("Failed to create ticket")
     }
@@ -254,6 +292,7 @@ export default function Marketplace({ user, onLogout }) {
       if (ticketError) throw ticketError
 
       // Refresh ticket list and update the selected ticket in the popup
+      playClaim()
       await fetchTickets()
 
       // Update selected ticket locally so the popup reflects the change instantly
@@ -322,6 +361,7 @@ export default function Marketplace({ user, onLogout }) {
       if (ticketError) throw ticketError
 
       setSelectedTicket(null)
+      playClose()
       await fetchTickets()
     } catch (err) {
       console.error('Error deleting ticket:', err)
@@ -402,7 +442,7 @@ export default function Marketplace({ user, onLogout }) {
           <button
             key={cat}
             className={`mp-filter-pill ${activeFilter === cat ? 'active' : ''}`}
-            onClick={() => setActiveFilter(cat)}
+            onClick={() => { playClick(); setActiveFilter(cat) }}
             id={`filter-${cat.replace(/\s+/g, '-').toLowerCase()}`}
           >
             {cat}
@@ -483,7 +523,7 @@ export default function Marketplace({ user, onLogout }) {
       <div className="mp-fab-container" id="marketplace-fabs">
         <button
           className="mp-fab request"
-          onClick={() => setModalOpen('request')}
+          onClick={() => { playPop(); setModalOpen('request') }}
           id="fab-request"
         >
           <Hand size={20} />
@@ -491,7 +531,7 @@ export default function Marketplace({ user, onLogout }) {
         </button>
         <button
           className="mp-fab post"
-          onClick={() => setModalOpen('seller')}
+          onClick={() => { playPop(); setModalOpen('seller') }}
           id="fab-post"
         >
           <Plus size={20} />
@@ -645,9 +685,8 @@ export default function Marketplace({ user, onLogout }) {
             {/* Posted by */}
             <div className="mp-detail-user-row">
               <span className="mp-ticket-user-dot" />
-              <span className="mp-detail-posted-by mp-tooltip-container">
-                Posted by <strong>@{selectedTicket.user}</strong>
-                <span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span>
+              <span className="mp-detail-posted-by">
+                Posted by <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag>
               </span>
             </div>
 
@@ -661,8 +700,7 @@ export default function Marketplace({ user, onLogout }) {
                     <span className="mp-detail-claimed-sub">You claimed this ticket.</span>
                   ) : (
                     <span className="mp-detail-claimed-sub">
-                        <strong className="mp-tooltip-container">@{selectedTicket.claimantUser || 'Someone'}
-                          {selectedTicket.claimantRollno && <span className="mp-tooltip">{studentNames?.[selectedTicket.claimantRollno] || 'Unknown'}</span>}</strong> already grabbed this one.
+                        <NameTag username={selectedTicket.claimantUser || 'Someone'} realName={selectedTicket.claimantRollno ? studentNames?.[selectedTicket.claimantRollno] : null} className="mp-detail-nametag"><strong>@{selectedTicket.claimantUser || 'Someone'}</strong></NameTag> already grabbed this one.
                     </span>
                   )}
                 </div>
@@ -675,8 +713,7 @@ export default function Marketplace({ user, onLogout }) {
                 <Gavel size={18} className="mp-detail-bargain-icon" />
                 <div className="mp-detail-bargain-text">
                   <strong>Got a better deal?</strong>
-                  <span>Reach out to <strong className="mp-tooltip-container">@{selectedTicket.user}
-                    <span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span></strong> and offer a bargain!</span>
+                  <span>Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> and offer a bargain!</span>
                 </div>
               </div>
             )}
@@ -728,8 +765,7 @@ export default function Marketplace({ user, onLogout }) {
                 <div className="mp-detail-owner-claimed-actions">
                   <div className="mp-detail-owner-note success">
                     <CheckCircle2 size={16} />
-                    <span>Claimed by <strong className="mp-tooltip-container">@{selectedTicket.claimantUser || 'Someone'}
-                      {selectedTicket.claimantRollno && <span className="mp-tooltip">{studentNames?.[selectedTicket.claimantRollno] || 'Unknown'}</span>}</strong>! Connect with them.</span>
+                    <span>Claimed by <NameTag username={selectedTicket.claimantUser || 'Someone'} realName={selectedTicket.claimantRollno ? studentNames?.[selectedTicket.claimantRollno] : null} className="mp-detail-nametag"><strong>@{selectedTicket.claimantUser || 'Someone'}</strong></NameTag>! Connect with them.</span>
                   </div>
                   <button
                     className="mp-detail-close-ticket-btn"
