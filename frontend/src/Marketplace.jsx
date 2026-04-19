@@ -91,6 +91,18 @@ function TicketCard({ ticket, index, type, onClick, studentNames, user }) {
 
       <span className="mp-ticket-category">{ticket.category}</span>
 
+      {ticket.type === 'post' && ticket.claims?.length > 0 && (
+        ticket.claims.length >= 3 ? (
+          <div style={{ marginTop: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#b91c1c', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            🔥 High Demand: {ticket.claims.length} claims!
+          </div>
+        ) : (
+          <div style={{ marginTop: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#059669', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            📦 {ticket.claims.length} claim{ticket.claims.length > 1 ? 's' : ''}
+          </div>
+        )
+      )}
+
 
       <div className="mp-ticket-footer">
         <span className="mp-ticket-user">
@@ -734,17 +746,18 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
             <div className="mp-detail-divider" />
 
             {selectedTicket.claims && selectedTicket.claims.length > 0 && (
-              <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <strong style={{ color: '#059669', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
-                  📦 {selectedTicket.claims.length} {selectedTicket.claims.length === 1 ? 'person has' : 'people have'} claimed this!
+              <div style={{ background: (selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: `1px solid ${(selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}` }}>
+                <strong style={{ color: (selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? '#b91c1c' : '#059669', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  {(selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? '🔥 High Demand: ' : '📦 '} 
+                  {selectedTicket.claims.length} {selectedTicket.claims.length === 1 ? 'person has' : 'people have'} claimed this!
                 </strong>
                 {selectedTicket.claims.length <= 5 && (
-                  <ul style={{ margin: 0, paddingLeft: '20px', color: '#15803d', fontSize: '13px' }}>
+                  <ul style={{ margin: 0, paddingLeft: '20px', color: (selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? '#991b1b' : '#15803d', fontSize: '13px' }}>
                     {selectedTicket.claims.map((claim, idx) => {
                       const uname = claim.UserTable?.username || claim.user?.username || claim.claimant_rollno
                       return (
                         <li key={idx}>
-                          <NameTag username={uname} realName={studentNames?.[claim.claimant_rollno]} className="mp-detail-nametag" style={{ color: '#15803d' }}>
+                          <NameTag username={uname} realName={studentNames?.[claim.claimant_rollno]} className="mp-detail-nametag" style={{ color: (selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? '#991b1b' : '#15803d' }}>
                             <strong>@{uname}</strong>
                           </NameTag>
                         </li>
