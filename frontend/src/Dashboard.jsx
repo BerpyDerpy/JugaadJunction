@@ -15,7 +15,8 @@ import {
   Send,
 } from 'lucide-react'
 import React from 'react'
-import { playPop, playClose } from './sounds'
+import { playPop, playClose, playClaim } from './sounds'
+import NameTag from './NameTag'
 import './Dashboard.css'
 
 // ── Card styling helpers (same as Marketplace) ─────────────────
@@ -68,9 +69,12 @@ function CreditWheel({ score, max = 100 }) {
 }
 
 // ── Ticket Card (matches Marketplace exactly) ──────────────────
-function DashTicketCard({ ticket, index, type, onClick, studentNames }) {
+function DashTicketCard({ ticket, index, type, onClick, studentNames, user }) {
   const showTape = index % 4 === 1
   const showStain = index % 5 === 3
+
+  const hasClaimed = user && ticket.claims?.some(c => c.claimant_rollno === user.rollno)
+  const displayStatus = (hasClaimed && ticket.status !== 'closed') ? 'claimed' : ticket.status
 
   return (
     <div
@@ -98,13 +102,13 @@ function DashTicketCard({ ticket, index, type, onClick, studentNames }) {
 
       <span className="mp-ticket-category">{ticket.category}</span>
 
+
       <div className="mp-ticket-footer">
-        <span className="mp-ticket-user mp-tooltip-container">
+        <span className="mp-ticket-user">
           <span className="mp-ticket-user-dot" />
-          @{ticket.user}
-          <span className="mp-tooltip">{studentNames?.[ticket.ownerRollno] || 'Unknown'}</span>
+          <NameTag username={ticket.user} realName={studentNames?.[ticket.ownerRollno] || 'Unknown'} />
         </span>
-        <span className={`mp-status ${ticket.status}`}>{ticket.status}</span>
+        <span className={`mp-status ${displayStatus}`}>{displayStatus}</span>
       </div>
     </div>
   )
@@ -124,13 +128,15 @@ const WITTY_MESSAGES = [
 ]
 
 export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
-  const [tickets, setTickets] = useState([])
+  const [tickets, setTickets] = useState([]) // owned tickets
+  const [claimedTickets, setClaimedTickets] = useState([]) // tickets claimed by user
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('posted') // 'posted' | 'requested'
+  const [activeTab, setActiveTab] = useState('posted') // 'posted' | 'requested' | 'claimed'
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [socialCredit, setSocialCredit] = useState(user?.social_credit ?? 75)
   const [studentNames, setStudentNames] = useState({})
   const [toast, setToast] = useState(null)
+  const [closedAlertTicket, setClosedAlertTicket] = useState(null)
   const [unclaiming, setUnclaiming] = useState(false)
 
   // complaint modal state
@@ -151,6 +157,15 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     fetchNames()
     fetchUserTickets()
     fetchSocialCredit()
+    const channel = supabase.channel('dashboard_actions')
+      .on('broadcast', { event: 'ticket_action' }, () => {
+        fetchUserTickets()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const fetchSocialCredit = async () => {
@@ -170,42 +185,43 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
 
   const fetchUserTickets = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch tickets user owns (Posted / Requested)
+      const { data: ownedData, error: ownedError } = await supabase
         .from('TicketTable')
         .select(`
-          ticketid,
-          type,
-          owner_rollno,
-          claimant_rollno,
+          ticketid, type, owner_rollno, claimant_rollno,
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
+          claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
           metadata:TicketTableData ( title, description, category, status, ItemPrice )
         `)
-        .or(`owner_rollno.eq.${user.rollno},claimant_rollno.eq.${user.rollno}`)
+        .eq('owner_rollno', user.rollno)
 
-      if (error) throw error
+      if (ownedError) throw ownedError
 
-      if (data) {
-        const formatted = data.map(t => {
-          const ownerObj = Array.isArray(t.owner) ? t.owner[0] : t.owner
-          const username = ownerObj ? ownerObj.username : 'unknown'
-          const meta = Array.isArray(t.metadata) ? t.metadata[0] : t.metadata || {}
+      if (ownedData) {
+        setTickets(ownedData.map(formatter).reverse())
+      }
 
-          return {
-            id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
-            ticketid: t.ticketid,
-            title: meta.title || 'Untitled',
-            desc: meta.description || '',
-            category: meta.category || 'General',
-            price: meta.ItemPrice || 0,
-            user: username,
-            ownerRollno: t.owner_rollno,
-            claimantRollno: t.claimant_rollno,
-            status: meta.status || 'pending',
-            type: t.type || 'request',
-          }
-        })
-        setTickets(formatted.reverse())
+      // Fetch tickets user claimed
+      const { data: claimsData, error: claimsError } = await supabase
+        .from('TicketClaims')
+        .select(`
+          ticket:TicketTable!inner (
+            ticketid, type, owner_rollno, claimant_rollno,
+            owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+            claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
+            claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
+            metadata:TicketTableData ( title, description, category, status, ItemPrice )
+          )
+        `)
+        .eq('claimant_rollno', user.rollno)
+
+      if (claimsError) throw claimsError
+
+      if (claimsData) {
+        const unwrappedClaims = claimsData.map(c => Array.isArray(c.ticket) ? c.ticket[0] : c.ticket).filter(Boolean)
+        setClaimedTickets(unwrappedClaims.map(formatter).reverse())
       }
     } catch (err) {
       console.error('Error fetching user tickets:', err)
@@ -214,26 +230,58 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     }
   }
 
+  const formatter = (t) => {
+    const ownerObj = Array.isArray(t.owner) ? t.owner[0] : t.owner
+    const username = ownerObj ? ownerObj.username : 'unknown'
+    const meta = Array.isArray(t.metadata) ? t.metadata[0] : t.metadata || {}
+
+    return {
+      id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
+      ticketid: t.ticketid,
+      title: meta.title || 'Untitled',
+      desc: meta.description || '',
+      category: meta.category || 'General',
+      price: meta.ItemPrice || 0,
+      user: username,
+      ownerRollno: t.owner_rollno,
+      claimantRollno: t.claimant_rollno,
+      status: meta.status || 'pending',
+      type: t.type || 'request',
+      claims: t.claims || []
+    }
+  }
+
   const posted = useMemo(
-    () => tickets.filter(t => t.type === 'post' && t.ownerRollno === user.rollno),
-    [tickets, user.rollno]
+    () => tickets.filter(t => t.type === 'post'),
+    [tickets]
   )
   const requested = useMemo(
-    () => tickets.filter(t => t.type === 'request' && t.ownerRollno === user.rollno),
-    [tickets, user.rollno]
+    () => tickets.filter(t => t.type === 'request'),
+    [tickets]
   )
   const claimed = useMemo(
-    () => tickets.filter(t => t.claimantRollno === user.rollno && t.ownerRollno !== user.rollno),
-    [tickets, user.rollno]
+    () => claimedTickets,
+    [claimedTickets]
   )
+
+  useEffect(() => {
+    if (selectedTicket) {
+      const allTix = [...tickets, ...claimedTickets]
+      const t = allTix.find(x => x.ticketid === selectedTicket.ticketid)
+      if (t && JSON.stringify(t) !== JSON.stringify(selectedTicket)) {
+        setSelectedTicket(t)
+      }
+    }
+  }, [tickets, claimedTickets, selectedTicket])
 
   const activeList = activeTab === 'posted' ? posted : activeTab === 'requested' ? requested : claimed
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : '??'
 
-  const isClaimed = selectedTicket?.status === 'claimed'
+  const hasClaimed = selectedTicket?.claims?.some(c => c.claimant_rollno === user.rollno) || false
   const isOwner = selectedTicket?.ownerRollno === user.rollno
+  const isClosed = selectedTicket?.status === 'closed'
 
   const [deleting, setDeleting] = useState(false)
 
@@ -310,17 +358,12 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     if (!window.confirm("Release this ticket? It'll go back to pending.")) return
     setUnclaiming(true)
     try {
-      const { error: metaError } = await supabase
-        .from('TicketTableData')
-        .update({ status: 'pending' })
+      const { error: claimsError } = await supabase
+        .from('TicketClaims')
+        .delete()
         .eq('ticketid', ticket.ticketid)
-      if (metaError) throw metaError
-
-      const { error: ticketError } = await supabase
-        .from('TicketTable')
-        .update({ claimant_rollno: null })
-        .eq('ticketid', ticket.ticketid)
-      if (ticketError) throw ticketError
+        .eq('claimant_rollno', user.rollno)
+      if (claimsError) throw claimsError
 
       playClose()
       setSelectedTicket(null)
@@ -422,8 +465,16 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   ticket={t}
                   index={i}
                   type={t.type}
-                  onClick={setSelectedTicket}
+                  onClick={(ticket) => {
+                    playClaim();
+                    if (activeTab === 'claimed' && ticket.status === 'closed' && ticket.ownerRollno !== user.rollno) {
+                      setClosedAlertTicket(ticket);
+                    } else {
+                      setSelectedTicket(ticket);
+                    }
+                  }}
                   studentNames={studentNames}
+                  user={user}
                 />
               ))}
             </div>
@@ -453,7 +504,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           style={{ zIndex: 400 }}
         >
           <div
-            className={`mp-detail-popup ${isClaimed ? 'detail-claimed' : ''}`}
+            className={`mp-detail-popup ${hasClaimed ? 'detail-claimed' : ''}`}
             onClick={(e) => e.stopPropagation()}
             id="dash-ticket-detail-card"
           >
@@ -490,46 +541,88 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
 
             <div className="mp-detail-user-row">
               <span className="mp-ticket-user-dot" />
-              <span className="mp-detail-posted-by mp-tooltip-container">
-                Posted by <strong>@{selectedTicket.user}</strong>
-                <span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span>
+              <span className="mp-detail-posted-by">
+                Posted by <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag>
               </span>
             </div>
 
-            {isClaimed && (
+            {selectedTicket.claims?.length > 0 && (
+              <div style={{ background: '#e0f2fe', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #bae6fd', marginTop: '16px' }}>
+                <strong style={{ color: '#0284c7', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  👥 People who requested this offer ({selectedTicket.claims.length}):
+                </strong>
+                {(isOwner || selectedTicket.claims.length <= 5) ? (
+                  <div style={{ marginTop: '10px' }}>
+                    {isOwner && selectedTicket.claims.length > 5 && (
+                      <div style={{ fontSize: '11px', color: '#0369a1', marginBottom: '6px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Scroll to view all claimants
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {selectedTicket.claims.map((c, i) => {
+                        const uname = c.UserTable?.username || c.user?.username || c.claimant_rollno
+                        return (
+                          <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px', fontSize: '13px', color: '#0369a1', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>
+                              <NameTag username={uname} realName={studentNames?.[c.claimant_rollno]} className="mp-detail-nametag" style={{ color: '#0369a1' }}>
+                                @{uname}
+                              </NameTag>
+                            </span>
+                            <span style={{ fontSize: '12px', opacity: 0.8, fontWeight: 'normal' }}>Reach out to them!</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '8px', fontSize: '13px', color: '#0369a1', fontStyle: 'italic' }}>
+                    List hidden (too many claimants to show).
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Claimed state ── */}
+            {hasClaimed && !isClosed && (
               <div className="mp-detail-claimed-banner">
                 <CheckCircle2 size={20} className="mp-detail-claimed-icon" />
                 <div className="mp-detail-claimed-text">
-                  <strong>This ticket has been claimed!</strong>
-                  <span className="mp-detail-claimed-sub">
-                    {selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno
-                      ? "You have claimed this ticket!"
-                      : "Someone has claimed your ticket. Connect with them!"}
+                  <strong>You have claimed this ticket!</strong>
+                </div>
+              </div>
+            )}
+
+            {/* ── Closed state banner ── */}
+            {isClosed && (
+              <div className="mp-detail-closed-banner" id="closed-banner">
+                <Lock size={20} className="mp-detail-closed-icon" />
+                <div className="mp-detail-closed-text">
+                  <strong>This ticket is closed.</strong>
+                  <span className="mp-detail-closed-sub">
+                    {isOwner ? 'You marked this deal as done. 🎉' : 'The owner has closed this ticket.'}
                   </span>
                 </div>
               </div>
             )}
 
             <div className="mp-detail-actions">
-              {!isClaimed && (
+              {isOwner && !selectedTicket.claims?.length && !isClosed && (
                 <div className="mp-detail-owner-note">
                   <AlertTriangle size={16} />
                   <span>This is your ticket — waiting for someone to claim it.</span>
                 </div>
               )}
-              {isClaimed && (
+              {hasClaimed && !isOwner && !isClosed && (
                 <div className="mp-detail-owner-note success">
                   <CheckCircle2 size={16} />
                   <span>
-                    {selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno
-                      ? <React.Fragment>You claimed this ticket! Reach out to <strong className="mp-tooltip-container">@{selectedTicket.user}<span className="mp-tooltip">{studentNames?.[selectedTicket.ownerRollno] || 'Unknown'}</span></strong> to finalize.</React.Fragment>
-                      : "Your ticket has been claimed! Connect with the claimant."}
+                    You claimed this ticket! Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to finalize.
                   </span>
                 </div>
               )}
 
               {/* Unclaim button — only for the claimant */}
-              {isClaimed && selectedTicket.claimantRollno === user.rollno && selectedTicket.ownerRollno !== user.rollno && (
+              {hasClaimed && !isOwner && !isClosed && (
                 <button
                   className="db-unclaim-btn"
                   onClick={() => handleUnclaim(selectedTicket)}
@@ -655,6 +748,55 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
       {toast && (
         <div className="db-toast" id="db-witty-toast">
           <span className="db-toast-msg">{toast}</span>
+        </div>
+      )}
+
+      {/* ── Closed Ticket Alert Modal ── */}
+      {closedAlertTicket && (
+        <div
+          className="mp-modal-overlay"
+          onClick={() => setClosedAlertTicket(null)}
+          style={{ zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              padding: '28px',
+              borderRadius: '20px',
+              maxWidth: '340px',
+              width: '90%',
+              textAlign: 'center',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+            <h3 style={{ color: '#0f172a', margin: '0 0 12px 0', fontSize: '22px' }}>Ticket Closed</h3>
+            <p style={{ color: '#475569', fontSize: '15px', lineHeight: '1.6', margin: '0 0 28px 0' }}>
+              The owner{' '}
+              <NameTag username={closedAlertTicket.user} realName={studentNames?.[closedAlertTicket.ownerRollno]}>
+                <strong>@{closedAlertTicket.user}</strong>
+              </NameTag>{' '}
+              has officially closed this ticket. It is no longer available.
+            </p>
+            <button
+              onClick={() => setClosedAlertTicket(null)}
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: '#0ea5e9',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: '15px'
+              }}
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       )}
     </div>

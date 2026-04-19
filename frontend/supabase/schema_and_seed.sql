@@ -154,3 +154,13 @@ CREATE TABLE IF NOT EXISTS public."ComplaintsTable" (
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTable";
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTableData";
 ALTER PUBLICATION supabase_realtime ADD TABLE public."ComplaintsTable";
+
+-- TicketClaims Schema (for multi-claims)
+CREATE TABLE IF NOT EXISTS public."TicketClaims" (
+  id SERIAL PRIMARY KEY,
+  ticketid INT REFERENCES public."TicketTable"(ticketid) ON DELETE CASCADE,
+  claimant_rollno VARCHAR(25) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(ticketid, claimant_rollno)
+);
+ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketClaims";

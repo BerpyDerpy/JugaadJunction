@@ -22,42 +22,7 @@ import { usePushNotifications } from './usePushNotifications'
 import { playClick, playPop, playWhoosh, playSuccess, playError, playClaim, playClose } from './sounds'
 import './Marketplace.css'
 
-// ─── NameTag ────────────────────────────────────────────────────
-// shows username with real name on hover (desktop) or tap (mobile).
-// click-outside and scroll dismiss the tooltip.
-function NameTag({ username, realName, className, children }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  // dismiss on outside click or scroll
-  useEffect(() => {
-    if (!open) return
-    const dismiss = () => setOpen(false)
-    document.addEventListener('click', dismiss, true)
-    document.addEventListener('scroll', dismiss, true)
-    return () => {
-      document.removeEventListener('click', dismiss, true)
-      document.removeEventListener('scroll', dismiss, true)
-    }
-  }, [open])
-
-  const handleTap = useCallback((e) => {
-    e.stopPropagation()
-    setOpen(prev => !prev)
-  }, [])
-
-  return (
-    <span
-      ref={ref}
-      className={`mp-nametag ${className || ''} ${open ? 'mp-nametag-active' : ''}`}
-      onClick={handleTap}
-    >
-      {children || `@${username}`}
-      <span className="mp-nametag-tip">{realName || 'Unknown'}</span>
-    </span>
-  )
-}
-
+import NameTag from './NameTag'
 // ─── Filter categories ──────────────────────────────────────────
 const CATEGORIES = [
   'All',
@@ -86,9 +51,12 @@ function pick(arr, i) {
 }
 
 // ─── TicketCard ─────────────────────────────────────────────────
-function TicketCard({ ticket, index, type, onClick, studentNames }) {
+function TicketCard({ ticket, index, type, onClick, studentNames, user }) {
   const showTape = index % 4 === 1
   const showStain = index % 5 === 3
+
+  const hasClaimed = user && ticket.claims?.some(c => c.claimant_rollno === user.rollno)
+  const displayStatus = (hasClaimed && ticket.status !== 'closed') ? 'claimed' : ticket.status
 
   return (
     <div
@@ -116,12 +84,13 @@ function TicketCard({ ticket, index, type, onClick, studentNames }) {
 
       <span className="mp-ticket-category">{ticket.category}</span>
 
+
       <div className="mp-ticket-footer">
         <span className="mp-ticket-user">
           <span className="mp-ticket-user-dot" />
           <NameTag username={ticket.user} realName={studentNames?.[ticket.ownerRollno]} />
         </span>
-        <span className={`mp-status ${ticket.status}`}>{ticket.status}</span>
+        <span className={`mp-status ${displayStatus}`}>{displayStatus}</span>
       </div>
     </div>
   )
@@ -181,6 +150,7 @@ export default function Marketplace({ user, onLogout }) {
           claimant_rollno,
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
+          claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
           metadata:TicketTableData ( title, description, category, status, ItemPrice )
         `)
 
@@ -206,7 +176,8 @@ export default function Marketplace({ user, onLogout }) {
             claimantRollno: t.claimant_rollno,
             claimantUser: claimantUsername,
             status: meta.status || 'pending',
-            type: t.type || 'request'
+            type: t.type || 'request',
+            claims: t.claims || []
           }
         })
         setTickets(formattedTickets.reverse())
@@ -324,21 +295,11 @@ export default function Marketplace({ user, onLogout }) {
     setClaiming(true)
 
     try {
-      // Update status in TicketTableData
-      const { error: metaError } = await supabase
-        .from('TicketTableData')
-        .update({ status: 'claimed' })
-        .eq('ticketid', ticket.ticketid)
+      const { error: claimsError } = await supabase
+        .from('TicketClaims')
+        .insert({ ticketid: ticket.ticketid, claimant_rollno: user.rollno })
 
-      if (metaError) throw metaError
-
-      // Update claimant in TicketTable
-      const { error: ticketError } = await supabase
-        .from('TicketTable')
-        .update({ claimant_rollno: user.rollno })
-        .eq('ticketid', ticket.ticketid)
-
-      if (ticketError) throw ticketError
+      if (claimsError && claimsError.code !== '23505') throw claimsError // ignore duplicates
 
       // Refresh ticket list and update the selected ticket in the popup
       playClaim()
@@ -348,9 +309,7 @@ export default function Marketplace({ user, onLogout }) {
       // Update selected ticket locally so the popup reflects the change instantly
       setSelectedTicket(prev => prev ? {
         ...prev,
-        status: 'claimed',
-        claimantRollno: user.rollno,
-        claimantUser: user.username,
+        claims: [...(prev.claims || []), { claimant_rollno: user.rollno, UserTable: { username: user.username } }]
       } : null)
     } catch (err) {
       console.error('Error claiming ticket:', err)
@@ -455,22 +414,21 @@ export default function Marketplace({ user, onLogout }) {
     if (!window.confirm("Release this ticket? It'll go back to pending.")) return
     setUnclaiming(true)
     try {
-      const { error: metaError } = await supabase
-        .from('TicketTableData')
-        .update({ status: 'pending' })
+      const { error: claimsError } = await supabase
+        .from('TicketClaims')
+        .delete()
         .eq('ticketid', ticket.ticketid)
-      if (metaError) throw metaError
-
-      const { error: ticketError } = await supabase
-        .from('TicketTable')
-        .update({ claimant_rollno: null })
-        .eq('ticketid', ticket.ticketid)
-      if (ticketError) throw ticketError
+        .eq('claimant_rollno', user.rollno)
+      if (claimsError) throw claimsError
 
       playClose()
-      setSelectedTicket(null)
       await fetchTickets()
       channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+
+      setSelectedTicket(prev => prev ? {
+        ...prev,
+        claims: (prev.claims || []).filter(c => c.claimant_rollno !== user.rollno)
+      } : null)
     } catch (err) {
       console.error('Error unclaiming ticket:', err)
       alert('Failed to unclaim ticket')
@@ -481,9 +439,8 @@ export default function Marketplace({ user, onLogout }) {
 
   // Determine popup state for selected ticket
   const isOwner = selectedTicket?.ownerRollno === user.rollno
-  const isClaimed = selectedTicket?.status === 'claimed'
+  const hasClaimed = selectedTicket?.claims?.some(c => c.claimant_rollno === user.rollno) || false
   const isClosed = selectedTicket?.status === 'closed'
-  const isClaimant = selectedTicket?.claimantRollno === user.rollno
 
   return (
     <div className="marketplace" id="marketplace-root">
@@ -556,8 +513,9 @@ export default function Marketplace({ user, onLogout }) {
                   ticket={t}
                   index={i}
                   type="request"
-                  onClick={setSelectedTicket}
+                  onClick={(t) => { playClaim(); setSelectedTicket(t); }}
                   studentNames={studentNames}
+                  user={user}
                 />
               ))}
             </div>
@@ -589,8 +547,9 @@ export default function Marketplace({ user, onLogout }) {
                   ticket={t}
                   index={i}
                   type="seller"
-                  onClick={setSelectedTicket}
+                  onClick={(t) => { playClaim(); setSelectedTicket(t); }}
                   studentNames={studentNames}
+                  user={user}
                 />
               ))}
             </div>
@@ -725,7 +684,7 @@ export default function Marketplace({ user, onLogout }) {
           id="ticket-detail-overlay"
         >
           <div
-            className={`mp-detail-popup ${isClaimed ? 'detail-claimed' : ''} ${isClosed ? 'detail-closed' : ''}`}
+            className={`mp-detail-popup ${hasClaimed ? 'detail-claimed' : ''} ${isClosed ? 'detail-closed' : ''}`}
             onClick={(e) => e.stopPropagation()}
             id="ticket-detail-card"
           >
@@ -765,6 +724,28 @@ export default function Marketplace({ user, onLogout }) {
 
             <div className="mp-detail-divider" />
 
+            {selectedTicket.claims && selectedTicket.claims.length > 0 && (
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                <strong style={{ color: '#059669', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  📦 {selectedTicket.claims.length} {selectedTicket.claims.length === 1 ? 'person has' : 'people have'} claimed this!
+                </strong>
+                {selectedTicket.claims.length <= 5 && (
+                  <ul style={{ margin: 0, paddingLeft: '20px', color: '#15803d', fontSize: '13px' }}>
+                    {selectedTicket.claims.map((claim, idx) => {
+                      const uname = claim.UserTable?.username || claim.user?.username || claim.claimant_rollno
+                      return (
+                        <li key={idx}>
+                          <NameTag username={uname} realName={studentNames?.[claim.claimant_rollno]} className="mp-detail-nametag" style={{ color: '#15803d' }}>
+                            <strong>@{uname}</strong>
+                          </NameTag>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {/* Posted by */}
             <div className="mp-detail-user-row">
               <span className="mp-ticket-user-dot" />
@@ -774,29 +755,22 @@ export default function Marketplace({ user, onLogout }) {
             </div>
 
             {/* ── Claimed state ── */}
-            {isClaimed && (
+            {hasClaimed && (
               <div className="mp-detail-claimed-banner" id="claimed-banner">
                 <CheckCircle2 size={20} className="mp-detail-claimed-icon" />
                 <div className="mp-detail-claimed-text">
-                  <strong>This ticket has been claimed!</strong>
-                  {isClaimant ? (
-                    <span className="mp-detail-claimed-sub">You claimed this ticket.</span>
-                  ) : (
-                    <span className="mp-detail-claimed-sub">
-                      <NameTag username={selectedTicket.claimantUser || 'Someone'} realName={selectedTicket.claimantRollno ? studentNames?.[selectedTicket.claimantRollno] : null} className="mp-detail-nametag"><strong>@{selectedTicket.claimantUser || 'Someone'}</strong></NameTag> already grabbed this one.
-                    </span>
-                  )}
+                  <strong>You have claimed this ticket!</strong>
                 </div>
               </div>
             )}
 
-            {/* ── Bargain prompt for non-claimants on claimed tickets ── */}
-            {isClaimed && !isClaimant && !isOwner && (
+            {/* ── Bargain prompt for non-claimants on tickets ── */}
+            {!hasClaimed && !isOwner && !isClosed && selectedTicket.claims?.length > 0 && (
               <div className="mp-detail-bargain" id="bargain-section">
                 <Gavel size={18} className="mp-detail-bargain-icon" />
                 <div className="mp-detail-bargain-text">
-                  <strong>Got a better deal?</strong>
-                  <span>Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> and offer a bargain!</span>
+                  <strong>Join the waitlist!</strong>
+                  <span>Others have claimed this. Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to bargain!</span>
                 </div>
               </div>
             )}
@@ -816,7 +790,7 @@ export default function Marketplace({ user, onLogout }) {
 
             {/* ── Action area ── */}
             <div className="mp-detail-actions">
-              {!isClaimed && !isClosed && !isOwner && (
+              {!hasClaimed && !isClosed && !isOwner && (
                 <button
                   className="mp-detail-claim-btn"
                   onClick={() => handleClaim(selectedTicket)}
@@ -837,8 +811,8 @@ export default function Marketplace({ user, onLogout }) {
                 </button>
               )}
 
-              {/* Unclaim button — only for the claimant */}
-              {isClaimed && isClaimant && !isOwner && !isClosed && (
+              {/* Unclaim button — only if claimed */}
+              {hasClaimed && !isOwner && !isClosed && (
                 <button
                   className="mp-detail-unclaim-btn"
                   onClick={() => handleUnclaim(selectedTicket)}
@@ -859,19 +833,15 @@ export default function Marketplace({ user, onLogout }) {
                 </button>
               )}
 
-              {isOwner && !isClaimed && !isClosed && (
+              {isOwner && !selectedTicket.claims?.length && !isClosed && (
                 <div className="mp-detail-owner-note">
                   <AlertTriangle size={16} />
                   <span>This is your ticket — waiting for someone to claim it.</span>
                 </div>
               )}
 
-              {isOwner && isClaimed && !isClosed && (
+              {isOwner && !isClosed && (
                 <div className="mp-detail-owner-claimed-actions">
-                  <div className="mp-detail-owner-note success">
-                    <CheckCircle2 size={16} />
-                    <span>Claimed by <NameTag username={selectedTicket.claimantUser || 'Someone'} realName={selectedTicket.claimantRollno ? studentNames?.[selectedTicket.claimantRollno] : null} className="mp-detail-nametag"><strong>@{selectedTicket.claimantUser || 'Someone'}</strong></NameTag>! Connect with them.</span>
-                  </div>
                   <button
                     className="mp-detail-close-ticket-btn"
                     onClick={() => handleClose(selectedTicket)}
@@ -893,12 +863,6 @@ export default function Marketplace({ user, onLogout }) {
                 </div>
               )}
 
-              {isClosed && !isOwner && (
-                <div className="mp-detail-owner-note">
-                  <Lock size={16} />
-                  <span>This ticket has been closed by the owner.</span>
-                </div>
-              )}
 
               {isOwner && (
                 <button
