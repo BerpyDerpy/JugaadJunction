@@ -193,7 +193,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
           claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
-          metadata:TicketTableData ( title, description, category, status, ItemPrice )
+          title, description, category, status, "ItemPrice"
         `)
         .eq('owner_rollno', user.rollno)
 
@@ -212,7 +212,7 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
             claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
             claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
-            metadata:TicketTableData ( title, description, category, status, ItemPrice )
+            title, description, category, status, "ItemPrice"
           )
         `)
         .eq('claimant_rollno', user.rollno)
@@ -233,19 +233,18 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const formatter = (t) => {
     const ownerObj = Array.isArray(t.owner) ? t.owner[0] : t.owner
     const username = ownerObj ? ownerObj.username : 'unknown'
-    const meta = Array.isArray(t.metadata) ? t.metadata[0] : t.metadata || {}
 
     return {
       id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
       ticketid: t.ticketid,
-      title: meta.title || 'Untitled',
-      desc: meta.description || '',
-      category: meta.category || 'General',
-      price: meta.ItemPrice || 0,
+      title: t.title || 'Untitled',
+      desc: t.description || '',
+      category: t.category || 'General',
+      price: t.ItemPrice || 0,
       user: username,
       ownerRollno: t.owner_rollno,
       claimantRollno: t.claimant_rollno,
-      status: meta.status || 'pending',
+      status: t.status || 'pending',
       type: t.type || 'request',
       claims: t.claims || []
     }
@@ -290,12 +289,6 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     if (deleting) return
     setDeleting(true)
     try {
-      const { error: metaError } = await supabase
-        .from('TicketTableData')
-        .delete()
-        .eq('ticketid', ticket.ticketid)
-      if (metaError) throw metaError
-
       const { error: ticketError } = await supabase
         .from('TicketTable')
         .delete()
@@ -568,7 +561,6 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                                 @{uname}
                               </NameTag>
                             </span>
-                            <span style={{ fontSize: '12px', opacity: 0.8, fontWeight: 'normal' }}>Reach out to them!</span>
                           </div>
                         )
                       })}

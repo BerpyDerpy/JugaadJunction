@@ -1,3 +1,10 @@
+-- Drop existing tables to recreate normalized ones (except StudentNames)
+DROP TABLE IF EXISTS public."TicketClaims" CASCADE;
+DROP TABLE IF EXISTS public."ComplaintsTable" CASCADE;
+DROP TABLE IF EXISTS public."TicketTableData" CASCADE;
+DROP TABLE IF EXISTS public."TicketTable" CASCADE;
+DROP TABLE IF EXISTS public."UserTable" CASCADE;
+
 -- UserTable Schema
 CREATE TABLE IF NOT EXISTS public."UserTable" (
   rollno VARCHAR(25) PRIMARY KEY,
@@ -12,18 +19,13 @@ CREATE TABLE IF NOT EXISTS public."StudentNames" (
   first_name VARCHAR(100) NOT NULL
 );
 
--- TicketTable (Ownership) Schema
+-- TicketTable Schema (Normalized)
 CREATE TABLE IF NOT EXISTS public."TicketTable" (
   ticketid SERIAL PRIMARY KEY,
-  owner_rollno VARCHAR(25) REFERENCES public."UserTable"(rollno),
-  claimant_rollno VARCHAR(25) REFERENCES public."UserTable"(rollno) NULL,
-  type VARCHAR(10) CHECK (type IN ('request', 'post')) NOT NULL DEFAULT 'request'
-);
-
--- TicketTableData (Meta data) Schema
-CREATE TABLE IF NOT EXISTS public."TicketTableData" (
-  ticketid INT PRIMARY KEY REFERENCES public."TicketTable"(ticketid),
-  title VARCHAR(255) NOT NULL,
+  owner_rollno VARCHAR(25) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE,
+  claimant_rollno VARCHAR(25) REFERENCES public."UserTable"(rollno) ON DELETE SET NULL,
+  type VARCHAR(10) CHECK (type IN ('request', 'post')) NOT NULL DEFAULT 'request',
+  title VARCHAR(255) NOT NULL DEFAULT 'Untitled',
   description TEXT,
   category VARCHAR(100),
   status VARCHAR(20) CHECK (status IN ('pending', 'claimed', 'closed', 'time barred')) DEFAULT 'pending',
@@ -32,18 +34,17 @@ CREATE TABLE IF NOT EXISTS public."TicketTableData" (
 
 -- Schema Migrations for existing tables
 ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS type VARCHAR(10) CHECK (type IN ('request', 'post')) NOT NULL DEFAULT 'request';
-ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT 'Untitled';
-ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS description TEXT;
-ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS category VARCHAR(100);
-ALTER TABLE public."TicketTableData" ADD COLUMN IF NOT EXISTS "ItemPrice" INT DEFAULT 0;
-ALTER TABLE public."TicketTableData" DROP COLUMN IF EXISTS data;
+ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT 'Untitled';
+ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS "ItemPrice" INT DEFAULT 0;
+ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS status VARCHAR(20) CHECK (status IN ('pending', 'claimed', 'closed', 'time barred')) DEFAULT 'pending';
 
--- Dummy Data Insertion for UserTable
-INSERT INTO public."UserTable" (rollno, password, username, social_credit) VALUES
-('160124737177', 'securepass1', 'mahithazari', 85),
-('160124737178', 'securepass2', 'johndoe', 60),
-('160124737179', 'securepass3', 'janedoe', 100)
-ON CONFLICT (rollno) DO NOTHING;
+-- Drop the old TicketTableData if it exists
+DROP TABLE IF EXISTS public."TicketTableData" CASCADE;
+
+-- Dummy Data Insertion for UserTable (Removed generic dummy data, keep admin only)
+-- Admin record inserted below.
 
 -- NEW: Data Insertion for StudentNames (Extracted First Names)
 INSERT INTO public."StudentNames" (rollno, first_name) VALUES
@@ -119,18 +120,7 @@ INSERT INTO public."StudentNames" (rollno, first_name) VALUES
 ('160124737319', 'Aravind Kumar')
 ON CONFLICT (rollno) DO NOTHING;
 
--- Reset sequence to avoid manual ID insert issues if needed, but we'll manually specify for dummy data
-INSERT INTO public."TicketTable" (ticketid, owner_rollno, claimant_rollno, type) VALUES
-(1, '160124737177', NULL, 'request'),
-(2, '160124737178', '160124737177', 'post'),
-(3, '160124737179', '160124737178', 'post')
-ON CONFLICT (ticketid) DO NOTHING;
-
-INSERT INTO public."TicketTableData" (ticketid, title, description, category, status, "ItemPrice") VALUES
-(1, 'Need 2 A4 sheets urgently', 'Have a lab record submission in 20 min. Will return tomorrow!', 'A4', 'pending', 0),
-(2, 'Selling 50 extra A4 sheets', 'Bought a ream, only used half. ₹30 for the lot, meet near canteen.', 'A4', 'claimed', 30),
-(3, 'Water bottle (Milton 1L)', 'Bought two by mistake. Sealed, unused. ₹150.', 'Water Bottle', 'closed', 150)
-ON CONFLICT (ticketid) DO NOTHING;
+-- No dummy tickets inserted as per instructions.
 
 -- Ensure sequence is updated
 SELECT setval('public."TicketTable_ticketid_seq"', COALESCE((SELECT MAX(ticketid) FROM public."TicketTable") + 1, 1), false);
@@ -143,7 +133,7 @@ ON CONFLICT (rollno) DO NOTHING;
 -- ComplaintsTable Schema
 CREATE TABLE IF NOT EXISTS public."ComplaintsTable" (
   id SERIAL PRIMARY KEY,
-  rollno VARCHAR(25) REFERENCES public."UserTable"(rollno),
+  rollno VARCHAR(25) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE,
   subject VARCHAR(255) NOT NULL,
   description TEXT,
   status VARCHAR(20) CHECK (status IN ('open', 'resolved')) DEFAULT 'open',
@@ -152,7 +142,6 @@ CREATE TABLE IF NOT EXISTS public."ComplaintsTable" (
 
 -- Enable real-time for tickets
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTable";
-ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketTableData";
 ALTER PUBLICATION supabase_realtime ADD TABLE public."ComplaintsTable";
 
 -- TicketClaims Schema (for multi-claims)
@@ -163,4 +152,15 @@ CREATE TABLE IF NOT EXISTS public."TicketClaims" (
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(ticketid, claimant_rollno)
 );
+
+-- Apply migrations for ON DELETE CASCADE to existing tables if needed
+ALTER TABLE public."TicketTable" DROP CONSTRAINT IF EXISTS "TicketTable_owner_rollno_fkey";
+ALTER TABLE public."TicketTable" ADD CONSTRAINT "TicketTable_owner_rollno_fkey" FOREIGN KEY (owner_rollno) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE;
+
+ALTER TABLE public."TicketTable" DROP CONSTRAINT IF EXISTS "TicketTable_claimant_rollno_fkey";
+ALTER TABLE public."TicketTable" ADD CONSTRAINT "TicketTable_claimant_rollno_fkey" FOREIGN KEY (claimant_rollno) REFERENCES public."UserTable"(rollno) ON DELETE SET NULL;
+
+ALTER TABLE public."ComplaintsTable" DROP CONSTRAINT IF EXISTS "ComplaintsTable_rollno_fkey";
+ALTER TABLE public."ComplaintsTable" ADD CONSTRAINT "ComplaintsTable_rollno_fkey" FOREIGN KEY (rollno) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE;
+
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketClaims";

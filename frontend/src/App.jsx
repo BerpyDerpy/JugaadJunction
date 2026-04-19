@@ -318,6 +318,7 @@ function App() {
     if (welcomeData) {
       setUser(welcomeData.userData)
       localStorage.setItem('jj_user', JSON.stringify(welcomeData.userData))
+      localStorage.setItem('jj_just_signed_up', 'true')
       setShowWelcome(false)
       setWelcomeData(null)
     }

@@ -116,6 +116,14 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
   const [dashboardOpen, setDashboardOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
+  // check if just signed up
+  useEffect(() => {
+    if (localStorage.getItem('jj_just_signed_up') === 'true') {
+      setHelpOpen(true)
+      localStorage.removeItem('jj_just_signed_up')
+    }
+  }, [])
+
   // modal state (create ticket)
   const [modalOpen, setModalOpen] = useState(null) // 'request' | 'seller' | null
   const [formTitle, setFormTitle] = useState('')
@@ -159,7 +167,7 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
           owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
           claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
-          metadata:TicketTableData ( title, description, category, status, ItemPrice )
+          title, description, category, status, "ItemPrice"
         `)
 
       if (error) throw error
@@ -170,20 +178,18 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
           const username = ownerObj ? ownerObj.username : 'unknown'
           const claimantObj = Array.isArray(t.claimant) ? t.claimant[0] : t.claimant
           const claimantUsername = claimantObj ? claimantObj.username : null
-          const meta = Array.isArray(t.metadata) ? t.metadata[0] : t.metadata || {}
-
           return {
             id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
             ticketid: t.ticketid,
-            title: meta.title || 'Untitled',
-            desc: meta.description || '',
-            category: meta.category || 'General',
-            price: meta.ItemPrice || 0,
+            title: t.title || 'Untitled',
+            desc: t.description || '',
+            category: t.category || 'General',
+            price: t.ItemPrice || 0,
             user: username,
             ownerRollno: t.owner_rollno,
             claimantRollno: t.claimant_rollno,
             claimantUser: claimantUsername,
-            status: meta.status || 'pending',
+            status: t.status || 'pending',
             type: t.type || 'request',
             claims: t.claims || []
           }
@@ -207,9 +213,6 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
       }
     })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'TicketTable' }, () => {
-        fetchTickets()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'TicketTableData' }, () => {
         fetchTickets()
       })
       .on('broadcast', { event: 'ticket_action' }, () => {
@@ -262,29 +265,19 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
     try {
       const dbType = modalOpen === 'seller' ? 'post' : 'request'
 
-      const { data: ticketData, error: ticketError } = await supabase
+      const { error: ticketError } = await supabase
         .from('TicketTable')
         .insert({
           owner_rollno: user.rollno,
-          type: dbType
-        })
-        .select('ticketid')
-        .single()
-
-      if (ticketError) throw ticketError
-
-      const { error: metaError } = await supabase
-        .from('TicketTableData')
-        .insert({
-          ticketid: ticketData.ticketid,
+          type: dbType,
           title: formTitle,
           description: formDesc,
           category: formCategory,
-          ItemPrice: formPrice ? parseInt(formPrice, 10) : 0,
+          "ItemPrice": formPrice ? parseInt(formPrice, 10) : 0,
           status: 'pending'
         })
 
-      if (metaError) throw metaError
+      if (ticketError) throw ticketError
 
       closeModal()
       playSuccess()
@@ -365,12 +358,6 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
     if (deleting) return
     setDeleting(true)
     try {
-      const { error: metaError } = await supabase
-        .from('TicketTableData')
-        .delete()
-        .eq('ticketid', ticket.ticketid)
-      if (metaError) throw metaError
-
       const { error: ticketError } = await supabase
         .from('TicketTable')
         .delete()
@@ -397,7 +384,7 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
     setClosing(true)
     try {
       const { error } = await supabase
-        .from('TicketTableData')
+        .from('TicketTable')
         .update({ status: 'closed' })
         .eq('ticketid', ticket.ticketid)
 

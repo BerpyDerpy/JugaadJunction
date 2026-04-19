@@ -11,6 +11,8 @@ import {
   RotateCcw,
   X,
   AlertCircle,
+  Ticket,
+  Trash2,
 } from 'lucide-react'
 import './AdminPanel.css'
 
@@ -31,6 +33,10 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
   const [complaints, setComplaints] = useState([])
   const [loadingComplaints, setLoadingComplaints] = useState(true)
   const [selectedComplaint, setSelectedComplaint] = useState(null)
+
+  // tickets state
+  const [tickets, setTickets] = useState([])
+  const [loadingTickets, setLoadingTickets] = useState(true)
 
   // ── Fetch all users ──────────────────────────────────────────
   const fetchUsers = async () => {
@@ -80,10 +86,31 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
     }
   }
 
+  // ── Fetch all tickets ────────────────────────────────────────
+  const fetchTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('TicketTable')
+        .select(`
+          ticketid, type, owner_rollno, title, category, status, "ItemPrice",
+          owner:UserTable!TicketTable_owner_rollno_fkey(username)
+        `)
+        .order('ticketid', { ascending: false })
+
+      if (error) throw error
+      if (data) setTickets(data)
+    } catch (err) {
+      console.error('Error fetching tickets:', err)
+    } finally {
+      setLoadingTickets(false)
+    }
+  }
+
   useEffect(() => {
     fetchUsers()
     fetchStudentNames()
     fetchComplaints()
+    fetchTickets()
   }, [])
 
   // ── Save credit score ────────────────────────────────────────
@@ -111,6 +138,46 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
       showToast(`Credit score updated for ${rollno}`)
     } catch (err) {
       console.error('Error updating credit:', err)
+    }
+  }
+
+  // ── Delete user ───────────────────────────────────────────────
+  const [deletingUser, setDeletingUser] = useState(false)
+  const handleDeleteUser = async (rollno) => {
+    if (!window.confirm(`Delete user ${rollno} and ALL their tickets/complaints? This cannot be undone.`)) return
+    setDeletingUser(true)
+    try {
+      const { error } = await supabase.from('UserTable').delete().eq('rollno', rollno)
+      if (error) throw error
+      
+      setUsers(prev => prev.filter(u => u.rollno !== rollno))
+      setTickets(prev => prev.filter(t => t.owner_rollno !== rollno))
+      setComplaints(prev => prev.filter(c => c.rollno !== rollno))
+      showToast(`User ${rollno} deleted`)
+    } catch (err) {
+      console.error('Error deleting user:', err)
+      alert('Failed to delete user')
+    } finally {
+      setDeletingUser(false)
+    }
+  }
+
+  // ── Delete ticket ─────────────────────────────────────────────
+  const [deletingTicket, setDeletingTicket] = useState(false)
+  const handleDeleteTicket = async (ticketid) => {
+    if (!window.confirm(`Delete ticket #${ticketid}?`)) return
+    setDeletingTicket(true)
+    try {
+      const { error } = await supabase.from('TicketTable').delete().eq('ticketid', ticketid)
+      if (error) throw error
+      
+      setTickets(prev => prev.filter(t => t.ticketid !== ticketid))
+      showToast(`Ticket #${ticketid} deleted`)
+    } catch (err) {
+      console.error('Error deleting ticket:', err)
+      alert('Failed to delete ticket')
+    } finally {
+      setDeletingTicket(false)
     }
   }
 
@@ -163,6 +230,19 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
       c.status.toLowerCase().includes(q)
     )
   }, [complaints, search])
+
+  // ── Filter tickets by search ────────────────────────────────
+  const filteredTickets = useMemo(() => {
+    if (!search.trim()) return tickets
+    const q = search.toLowerCase()
+    return tickets.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      (t.category || '').toLowerCase().includes(q) ||
+      t.owner_rollno.toLowerCase().includes(q) ||
+      t.status.toLowerCase().includes(q) ||
+      (t.owner?.username || '').toLowerCase().includes(q)
+    )
+  }, [tickets, search])
 
   // ── Format timestamp ────────────────────────────────────────
   const formatTime = (ts) => {
@@ -222,6 +302,15 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
           <MessageSquareWarning size={16} />
           Complaints
           <span className="admin-tab-count">{complaints.filter(c => c.status === 'open').length}</span>
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'tickets' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('tickets'); setSearch('') }}
+          id="admin-tab-tickets"
+        >
+          <Ticket size={16} />
+          Tickets
+          <span className="admin-tab-count">{tickets.length}</span>
         </button>
       </div>
 
@@ -291,9 +380,17 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
                             title="Save credit score"
                             id={`credit-save-${u.rollno}`}
                             disabled={!isEdited}
-                            style={{ opacity: isEdited ? 1 : 0.3 }}
+                            style={{ opacity: isEdited ? 1 : 0.3, marginRight: '10px' }}
                           >
                             {savedRows[u.rollno] ? <CheckCircle2 size={16} /> : <Save size={16} />}
+                          </button>
+                          <button
+                            className="admin-delete-btn"
+                            onClick={() => handleDeleteUser(u.rollno)}
+                            disabled={deletingUser}
+                            title="Delete User"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </td>
                       </tr>
@@ -385,6 +482,63 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
             <div className="admin-empty">
               <div className="admin-empty-icon">🕊️</div>
               <p>{search ? `No complaints matching "${search}"` : 'No complaints yet. Peace and quiet!'}</p>
+            </div>
+          )
+        )}
+
+        {/* ── Tickets Tab ── */}
+        {activeTab === 'tickets' && (
+          loadingTickets ? (
+            <div className="admin-loading">
+              <div className="admin-spinner" />
+              <span>Loading tickets…</span>
+            </div>
+          ) : filteredTickets.length > 0 ? (
+            <div className="admin-table-container">
+              <table className="admin-table" id="admin-tickets-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Owner</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTickets.map((t) => {
+                    const uname = Array.isArray(t.owner) ? t.owner[0]?.username : t.owner?.username;
+                    return (
+                    <tr key={t.ticketid}>
+                      <td style={{ color: '#8b7355', fontWeight: 600 }}>#{t.ticketid}</td>
+                      <td>{t.title}</td>
+                      <td>@{uname || 'unknown'} <br/><span style={{ fontSize: '11px', color: '#a38568'}}>{t.owner_rollno}</span></td>
+                      <td><span style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: 'bold', color: t.type === 'request' ? '#ef4444' : '#22c55e' }}>{t.type}</span></td>
+                      <td>
+                        <span className={`admin-status-badge ${t.status}`}>
+                          {t.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="admin-delete-btn"
+                          onClick={() => handleDeleteTicket(t.ticketid)}
+                          disabled={deletingTicket}
+                          title="Delete Ticket"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )})}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="admin-empty">
+              <div className="admin-empty-icon">🎟️</div>
+              <p>No tickets found.</p>
             </div>
           )
         )}
