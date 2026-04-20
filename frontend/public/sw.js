@@ -12,8 +12,11 @@ self.addEventListener('push', function(event) {
       icon: '/favicon.svg',
       badge: '/favicon.svg',
       vibrate: [100, 50, 100],
+      tag: data.tag || 'jugaad-notification',
+      renotify: true,
       data: {
         dateOfArrival: Date.now(),
+        url: data.url || '/',
         primaryKey: '2'
       }
     };
@@ -26,17 +29,21 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  // Attempt to focus an existing window if one is open, otherwise open a new one
+
+  const targetUrl = event.notification.data?.url || '/';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      // Try to focus an existing window
       for (let i = 0; i < clientList.length; i++) {
         let client = clientList[i];
-        if (client.url === '/' && 'focus' in client) {
+        if ('focus' in client) {
           return client.focus();
         }
       }
+      // Otherwise open a new one
       if (clients.openWindow) {
-        return clients.openWindow('/');
+        return clients.openWindow(targetUrl);
       }
     })
   );

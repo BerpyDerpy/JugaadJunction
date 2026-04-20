@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import { usePushNotifications } from './usePushNotifications'
+import { notifyTicketClaimed, notifyTicketUnclaimed, notifyNewTicketPosted, notifyTicketClosed } from './pushNotificationHelper'
 import { playClick, playPop, playWhoosh, playSuccess, playError, playClaim, playClose } from './sounds'
 import './Marketplace.css'
 
@@ -298,6 +299,9 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
       playSuccess()
       await fetchTickets()
       channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+
+      // Push notification: new ticket posted (global broadcast)
+      notifyNewTicketPosted(formTitle, dbType, user.username, user.rollno)
     } catch (err) {
       playError()
       console.error("Error creating ticket:", err)
@@ -321,6 +325,9 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
       playClaim()
       await fetchTickets()
       channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+
+      // Push notification: notify ticket owner
+      notifyTicketClaimed(ticket, user.username, user.rollno)
 
       // Update selected ticket locally so the popup reflects the change instantly
       setSelectedTicket(prev => prev ? {
@@ -408,6 +415,10 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
       await fetchTickets()
       channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
       setSelectedTicket(prev => prev ? { ...prev, status: 'closed' } : null)
+
+      // Push notification: notify all claimants that ticket is closed
+      const claimantRollnos = (ticket.claims || []).map(c => c.claimant_rollno).filter(Boolean)
+      notifyTicketClosed(ticket, user.username, claimantRollnos)
     } catch (err) {
       console.error('Error closing ticket:', err)
       alert('Failed to close ticket')
@@ -434,6 +445,9 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
       playClose()
       await fetchTickets()
       channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+
+      // Push notification: notify ticket owner about unclaim
+      notifyTicketUnclaimed(ticket, user.username, user.rollno)
 
       setSelectedTicket(prev => prev ? {
         ...prev,

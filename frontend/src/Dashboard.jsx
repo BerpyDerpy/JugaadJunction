@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import React from 'react'
 import { playPop, playClose, playClaim } from './sounds'
+import { notifyTicketUnclaimed } from './pushNotificationHelper'
 import NameTag from './NameTag'
 import './Dashboard.css'
 
@@ -364,6 +365,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
       playClose()
       setSelectedTicket(null)
       await fetchUserTickets()
+
+      // Push notification: notify ticket owner about unclaim
+      notifyTicketUnclaimed(ticket, user.username, user.rollno)
     } catch (err) {
       console.error('Error unclaiming ticket:', err)
       alert('Failed to unclaim ticket')
