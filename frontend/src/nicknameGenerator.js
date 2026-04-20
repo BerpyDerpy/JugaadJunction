@@ -2,19 +2,19 @@
 // Funny + Gross + Desi. Real name is NEVER cropped.
 
 const ADJECTIVES = [
-  'homophobic', 'racist', 'sexist', 'pedophile', 'incel',
-  'simp', 'beta', 'faggot', 'chink', 'nigger',
+  'homophobic', 'racist', 'sexist',
+  'simp', 'beta',
   'pajeet', 'streetshitter',
-  'terrorist', 'jihadi', 'gandu', 'chutiya',
-  'randi', 'harami', 'kamina',
+  'terrorist', 'jihadi', 'gandu',
+  'harami', 'kamina',
   'gaand', 'shitty', 'pissy',
   'sweaty', 'oily', 'greasy', 'itchy', 'sticky', 'slimy'
 ]
 
 // Short adjectives (used when name is long)
 const SHORT_ADJECTIVES = [
-  'homo', 'racist', 'incel', 'simp', 'fag', 'chink', 'nigger',
-  'pajeet', 'jihadi', 'gandu', 'chut', 'randi', 'haram'
+  'homo', 'racist', 'simp', 'fag',
+  'gandu', 'haram'
 ]
 
 const TITLES = [
@@ -70,9 +70,6 @@ export function generateAbsurdDisgustingNickname(realName) {
 
   const patterns = [
     () => `${adj1}${name}`,                    // homoYashwanth
-    () => `${title}${adj1}${name}`,            // bhaiHomoYashwanth
-    () => `${adj1}${adj2}${name}`,             // racistIncelyashwanth
-    () => `${title}${adj2}${name}`,            // panditHomoYashwanth   (shorter version)
     () => `${adj1}${name}${title}`,            // homoYashwanthBhai
     () => `${adj2}${name}`,                    // ganduYashwanth        (single short)
   ]

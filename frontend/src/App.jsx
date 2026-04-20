@@ -472,7 +472,7 @@ function App() {
           path="/profile/:rollno"
           element={
             <RequireAuth user={user}>
-              <Profile user={user} />
+              <Profile user={user} setUser={setUser} onLogout={handleLogout} />
             </RequireAuth>
           }
         />

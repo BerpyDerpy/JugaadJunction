@@ -9,7 +9,15 @@ import {
   CheckCircle2,
   Award,
   User,
+  Pencil,
+  Lock,
+  Check,
+  X,
+  Eye,
+  EyeOff,
+  Settings,
 } from 'lucide-react'
+import { playPop, playSuccess, playError } from './sounds'
 import NameTag from './NameTag'
 import './Marketplace.css'
 import './Dashboard.css'
@@ -110,7 +118,7 @@ function ProfileTicketCard({ ticket, index, studentNames }) {
 }
 
 // ── Profile Page ───────────────────────────────────────────────
-export default function Profile({ user }) {
+export default function Profile({ user, setUser, onLogout }) {
   const { rollno } = useParams()
   const navigate = useNavigate()
 
@@ -125,6 +133,24 @@ export default function Profile({ user }) {
   const [notFound, setNotFound] = useState(false)
 
   const [activeTab, setActiveTab] = useState('created')
+
+  // edit profile state
+  const [editingUsername, setEditingUsername] = useState(false)
+  const [newUsername, setNewUsername] = useState('')
+  const [usernameSaving, setUsernameSaving] = useState(false)
+  const [usernameError, setUsernameError] = useState('')
+
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [showCurrentPw, setShowCurrentPw] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
+
+  const [toast, setToast] = useState(null)
 
   // fetch everything on mount
   useEffect(() => {
@@ -247,6 +273,154 @@ export default function Profile({ user }) {
 
   const activeList = activeTab === 'created' ? ownedTickets : claimedTickets
 
+  // ── Username change handler ──────────────────────────────────
+  const handleUsernameChange = async () => {
+    const trimmed = newUsername.trim()
+    setUsernameError('')
+
+    if (!trimmed) {
+      setUsernameError('Username cannot be empty.')
+      return
+    }
+    if (trimmed.length < 3) {
+      setUsernameError('Username must be at least 3 characters.')
+      return
+    }
+    if (trimmed.length > 30) {
+      setUsernameError('Username must be 30 characters or less.')
+      return
+    }
+    if (trimmed === profileUser.username) {
+      setEditingUsername(false)
+      return
+    }
+
+    setUsernameSaving(true)
+    try {
+      const { error } = await supabase
+        .from('UserTable')
+        .update({ username: trimmed })
+        .eq('rollno', rollno)
+
+      if (error) throw error
+
+      // update local state
+      setProfileUser(prev => ({ ...prev, username: trimmed }))
+
+      // update session
+      if (setUser) {
+        const updatedUser = { ...user, username: trimmed }
+        setUser(updatedUser)
+        localStorage.setItem('jj_user', JSON.stringify(updatedUser))
+      }
+
+      playSuccess()
+      setEditingUsername(false)
+      setToast('✏️ Username updated successfully!')
+      setTimeout(() => setToast(null), 3200)
+    } catch (err) {
+      console.error('Error updating username:', err)
+      playError()
+      setUsernameError(err.message || 'Failed to update username.')
+    } finally {
+      setUsernameSaving(false)
+    }
+  }
+
+  // ── Password change handler ──────────────────────────────────
+  const handlePasswordChange = async () => {
+    setPasswordError('')
+
+    if (!currentPassword) {
+      setPasswordError('Please enter your current password.')
+      return
+    }
+    if (!newPassword) {
+      setPasswordError('Please enter a new password.')
+      return
+    }
+    if (newPassword.length < 4) {
+      setPasswordError('New password must be at least 4 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.')
+      return
+    }
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current.')
+      return
+    }
+
+    setPasswordSaving(true)
+    try {
+      // verify current password
+      const { data: userData, error: fetchError } = await supabase
+        .from('UserTable')
+        .select('password')
+        .eq('rollno', rollno)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      if (userData.password !== currentPassword) {
+        setPasswordError('Current password is incorrect.')
+        playError()
+        setPasswordSaving(false)
+        return
+      }
+
+      // update password
+      const { error: updateError } = await supabase
+        .from('UserTable')
+        .update({ password: newPassword })
+        .eq('rollno', rollno)
+
+      if (updateError) throw updateError
+
+      // update session
+      if (setUser) {
+        const updatedUser = { ...user, password: newPassword }
+        setUser(updatedUser)
+        localStorage.setItem('jj_user', JSON.stringify(updatedUser))
+      }
+
+      playSuccess()
+      setChangingPassword(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setShowCurrentPw(false)
+      setShowNewPw(false)
+      setShowConfirmPw(false)
+      setToast('🔒 Password changed successfully!')
+      setTimeout(() => setToast(null), 3200)
+    } catch (err) {
+      console.error('Error updating password:', err)
+      playError()
+      setPasswordError(err.message || 'Failed to update password.')
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
+
+  const cancelUsernameEdit = () => {
+    setEditingUsername(false)
+    setNewUsername('')
+    setUsernameError('')
+  }
+
+  const cancelPasswordChange = () => {
+    setChangingPassword(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordError('')
+    setShowCurrentPw(false)
+    setShowNewPw(false)
+    setShowConfirmPw(false)
+  }
+
   // ── Loading state ────────────────────────────────────────────
   if (loading) {
     return (
@@ -324,7 +498,56 @@ export default function Profile({ user }) {
         <div className="db-user-header" id="profile-header" style={{ background: 'rgba(245, 230, 211, 0.06)', border: '1.5px solid rgba(245, 230, 211, 0.12)', borderRadius: 16, padding: '24px 28px', marginBottom: 24 }}>
           <div className="db-avatar" style={{ width: 64, height: 64, fontSize: 24 }}>{initials}</div>
           <div className="db-user-info" style={{ flex: 1 }}>
-            <h2 className="db-username" style={{ fontSize: 28 }}>@{profileUser.username}</h2>
+            {editingUsername ? (
+              <div className="pf-username-edit" id="profile-username-edit">
+                <div className="pf-username-edit-row">
+                  <span className="pf-username-at">@</span>
+                  <input
+                    id="profile-username-input"
+                    className="pf-username-input"
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => { setNewUsername(e.target.value); setUsernameError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUsernameChange()}
+                    placeholder="Enter new username"
+                    autoFocus
+                    maxLength={30}
+                  />
+                  <button
+                    className="pf-edit-action-btn pf-save-btn"
+                    onClick={handleUsernameChange}
+                    disabled={usernameSaving}
+                    id="profile-username-save"
+                    title="Save"
+                  >
+                    {usernameSaving ? <div className="mp-detail-btn-spinner" /> : <Check size={16} />}
+                  </button>
+                  <button
+                    className="pf-edit-action-btn pf-cancel-btn"
+                    onClick={cancelUsernameEdit}
+                    id="profile-username-cancel"
+                    title="Cancel"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                {usernameError && <div className="pf-edit-error">{usernameError}</div>}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h2 className="db-username" style={{ fontSize: 28 }}>@{profileUser.username}</h2>
+                {isOwnProfile && (
+                  <button
+                    className="pf-inline-edit-btn"
+                    onClick={() => { setNewUsername(profileUser.username); setEditingUsername(true); playPop() }}
+                    id="profile-edit-username-btn"
+                    title="Edit username"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            )}
             <span className="db-rollno">{rollno}</span>
             {firstName && (
               <div style={{ marginTop: 4, fontSize: 14, color: '#d4b896', fontFamily: "'Patrick Hand', cursive" }}>
@@ -335,6 +558,128 @@ export default function Profile({ user }) {
           </div>
           <CreditWheel score={socialCredit} />
         </div>
+
+        {/* ── Edit Profile Section (own profile only) ── */}
+        {isOwnProfile && (
+          <div className="pf-settings-section" id="profile-settings">
+            <div className="mp-section-header" style={{ marginBottom: 16 }}>
+              <div className="mp-section-icon" style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', boxShadow: '0 3px 12px rgba(217, 119, 6, 0.35)' }}>
+                <Settings size={20} />
+              </div>
+              <h2 className="mp-section-title">Account Settings</h2>
+            </div>
+
+            {/* ── Change Password ── */}
+            {!changingPassword ? (
+              <button
+                className="pf-settings-btn"
+                onClick={() => { setChangingPassword(true); playPop() }}
+                id="profile-change-password-btn"
+              >
+                <Lock size={16} />
+                Change Password
+              </button>
+            ) : (
+              <div className="pf-password-form" id="profile-password-form">
+                <div className="pf-password-header">
+                  <Lock size={18} className="pf-password-header-icon" />
+                  <h3>Change Password</h3>
+                </div>
+
+                <div className="pf-field">
+                  <label htmlFor="current-password">Current Password</label>
+                  <div className="pf-password-input-wrapper">
+                    <input
+                      id="current-password"
+                      type={showCurrentPw ? 'text' : 'password'}
+                      className="pf-input"
+                      placeholder="Enter current password"
+                      value={currentPassword}
+                      onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
+                    />
+                    <button
+                      className="pf-pw-toggle"
+                      onClick={() => setShowCurrentPw(!showCurrentPw)}
+                      type="button"
+                      tabIndex={-1}
+                    >
+                      {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pf-field">
+                  <label htmlFor="new-password">New Password</label>
+                  <div className="pf-password-input-wrapper">
+                    <input
+                      id="new-password"
+                      type={showNewPw ? 'text' : 'password'}
+                      className="pf-input"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
+                    />
+                    <button
+                      className="pf-pw-toggle"
+                      onClick={() => setShowNewPw(!showNewPw)}
+                      type="button"
+                      tabIndex={-1}
+                    >
+                      {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pf-field">
+                  <label htmlFor="confirm-password">Confirm New Password</label>
+                  <div className="pf-password-input-wrapper">
+                    <input
+                      id="confirm-password"
+                      type={showConfirmPw ? 'text' : 'password'}
+                      className="pf-input"
+                      placeholder="Re-enter new password"
+                      value={confirmPassword}
+                      onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && handlePasswordChange()}
+                    />
+                    <button
+                      className="pf-pw-toggle"
+                      onClick={() => setShowConfirmPw(!showConfirmPw)}
+                      type="button"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {passwordError && <div className="pf-edit-error">{passwordError}</div>}
+
+                <div className="pf-password-actions">
+                  <button
+                    className="pf-pw-save-btn"
+                    onClick={handlePasswordChange}
+                    disabled={passwordSaving}
+                    id="profile-password-save"
+                  >
+                    {passwordSaving ? (
+                      <><div className="mp-detail-btn-spinner" /> Saving...</>
+                    ) : (
+                      <><Check size={16} /> Update Password</>
+                    )}
+                  </button>
+                  <button
+                    className="pf-pw-cancel-btn"
+                    onClick={cancelPasswordChange}
+                    id="profile-password-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Stats Row ── */}
         <div id="profile-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
@@ -454,6 +799,13 @@ export default function Profile({ user }) {
           )}
         </div>
       </main>
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div className="db-toast" id="profile-toast">
+          <span className="db-toast-msg">{toast}</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -20,60 +20,61 @@ export function usePushNotifications(rollno) {
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState(() => {
+    return typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+  });
 
   useEffect(() => {
-    // Push subscriptions require HTTPS. Skip silently on plain HTTP (local dev).
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
       return;
     }
-
-    // Only attempt if the user is logged in and the browser supports push
-    if (!rollno) return;
-
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       setIsSupported(true);
-      registerAndSubscribe();
+      checkSubscription();
     }
   }, [rollno]);
 
-  const registerAndSubscribe = async () => {
+  const checkSubscription = async () => {
     try {
-      // Register service worker if not already registered
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        const sub = await registration.pushManager.getSubscription();
+        setSubscription(sub);
+      }
+    } catch (err) {
+      console.error('Error checking subscription:', err);
+    }
+  };
+
+  const subscribe = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       let registration = await navigator.serviceWorker.getRegistration();
       if (!registration) {
         registration = await navigator.serviceWorker.register('/sw.js');
       }
-
-      // Wait for the SW to be active before using pushManager
       await navigator.serviceWorker.ready;
 
-      // Automatically request permission if not granted
       let permission = Notification.permission;
       if (permission === 'default') {
         permission = await Notification.requestPermission();
+        setPermissionStatus(permission);
       }
 
-      // If permission is denied, exit
       if (permission !== 'granted') {
-        setError('Notification permission denied');
-        return;
+        throw new Error('Notification permission denied');
       }
 
-      // Use the active registration from serviceWorker.ready
       const activeRegistration = await navigator.serviceWorker.ready;
-
-      // Check current subscription
       let sub = await activeRegistration.pushManager.getSubscription();
-      
       const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      
+
       if (!sub) {
         if (!publicVapidKey) {
-          console.warn("VITE_VAPID_PUBLIC_KEY is not defined — push notifications disabled.");
-          return;
+          throw new Error("VITE_VAPID_PUBLIC_KEY is not defined");
         }
-
-        // Create new subscription
         sub = await activeRegistration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
@@ -81,32 +82,51 @@ export function usePushNotifications(rollno) {
       }
 
       setSubscription(sub);
-      
-      // Upsert subscription to Supabase
       if (rollno && sub) {
-        const { error: dbError } = await supabase
+        await supabase
           .from('push_subscriptions')
           .upsert({
             roll_number: rollno,
             subscription: JSON.parse(JSON.stringify(sub))
           }, { onConflict: 'roll_number' });
-
-        if (dbError) {
-          console.error("Supabase upsert error:", dbError);
-          // Non-fatal — don't surface this to the user
-        }
       }
-
+      return true;
     } catch (err) {
-      if (err.name === 'AbortError') {
-        // Push service unavailable (no HTTPS, network issue, or browser restriction on localhost)
-        console.warn('Push notifications unavailable in this environment:', err.message);
-      } else {
-        console.error('Push registration error:', err);
-      }
       setError(err.message);
+      console.error('Push registration error:', err);
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
-  return { isSupported, subscription, error };
+  const unsubscribe = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        const sub = await registration.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+        }
+      }
+      setSubscription(null);
+      if (rollno) {
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('roll_number', rollno);
+      }
+      return true;
+    } catch (err) {
+      setError(err.message);
+      console.error('Push unregistration error:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { isSupported, permissionStatus, subscription, subscribe, unsubscribe, loading, error };
 }

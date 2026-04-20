@@ -1,19 +1,19 @@
 // ─── Witty message pools ─────────────────────────────────────────
 const CLAIM_MESSAGES = [
-  (user, title) => `🤝 @${user} just snagged your ticket "${title}"! Time to make jugaad happen.`,
-  (user, title) => `📬 Ding dong! @${user} claimed "${title}". Someone's feeling generous today.`,
-  (user, title) => `🎯 Bullseye! @${user} locked onto your "${title}". Go seal the deal!`,
-  (user, title) => `🏃 @${user} sprinted to claim "${title}" before anyone else could blink.`,
-  (user, title) => `🤙 @${user} is on it! Your ticket "${title}" just got a hero.`,
+  (user, title) => `@${user} just snagged your ticket "${title}"! Time to make jugaad happen.`,
+  (user, title) => `Ding dong! @${user} claimed "${title}". Someone's feeling generous today.`,
+  (user, title) => `Bullseye! @${user} locked onto your "${title}". Go seal the deal!`,
+  (user, title) => `@${user} sprinted to claim "${title}" before anyone else could blink.`,
+  (user, title) => `@${user} is on it! Your ticket "${title}" just got a hero.`,
   (user, title) => `⚡ Speed claim! @${user} grabbed "${title}" faster than a canteen samosa disappears.`,
 ];
 
 const UNCLAIM_MESSAGES = [
-  (user, title) => `👋 @${user} ghosted your ticket "${title}". Back to the board it goes!`,
-  (user, title) => `🫠 @${user} changed their mind about "${title}". Commitment issues, perhaps?`,
-  (user, title) => `🔄 Plot twist! @${user} unclaimed "${title}". Your ticket is single again.`,
-  (user, title) => `💨 @${user} vanished from "${title}" like WiFi in the basement.`,
-  (user, title) => `🙈 @${user} released "${title}". Don't worry, someone else will show up.`,
+  (user, title) => `@${user} ghosted your ticket "${title}". Back to the board it goes!`,
+  (user, title) => `@${user} changed their mind about "${title}". Commitment issues, perhaps?`,
+  (user, title) => `Plot twist! @${user} unclaimed "${title}". Your ticket is single again.`,
+  (user, title) => `@${user} vanished from "${title}" like WiFi in the basement.`,
+  (user, title) => `@${user} released "${title}". Don't worry, someone else will show up.`,
 ];
 
 const NEW_TICKET_MESSAGES = [
