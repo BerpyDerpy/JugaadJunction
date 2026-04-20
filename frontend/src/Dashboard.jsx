@@ -4,6 +4,8 @@ import { supabase } from './supabaseClient'
 import {
   X,
   Bell,
+  BellRing,
+  BellOff,
   ShoppingBag,
   Package,
   Megaphone,
@@ -118,16 +120,19 @@ function DashTicketCard({ ticket, index, type, onClick, studentNames, user }) {
 }
 
 // ── Dashboard Component ────────────────────────────────────────
-// ── Witty "not implemented" messages ───────────────────────────
-const WITTY_MESSAGES = [
-  "🚧 Our notification hamster is still on vacation.",
-  "🔔 Notifications? We're still teaching the bell to ring.",
-  "📬 Your inbox called, it said it doesn't exist yet.",
-  "🛠️ This feature is \"coming soon™\".",
-  "🐛 We were going to build this, but we got distracted by chai.",
-  "🪄 Abracadabra! …nope, still not implemented.",
-  "💤 Notifications are taking a power nap. Check back never.",
-  "🎯 Feature status: vibes only, no code.",
+// ── Notification enable success messages ───────────────────────
+const NOTIF_ENABLED_MESSAGES = [
+  "🔔 You're in the loop now! We'll ping you when jugaad happens.",
+  "📬 Notifications ON! Your phone is now a jugaad radar.",
+  "🎯 Notifications enabled! You'll never miss a ticket again.",
+  "⚡ Boom! Push notifications activated. Stay sharp!",
+  "🤝 You subscribed! Now the jugaad comes to you.",
+]
+
+const NOTIF_DENIED_MESSAGES = [
+  "🚫 Notifications blocked! Check your browser settings to unblock.",
+  "🙈 You denied notifications. We promise we won't spam… much.",
+  "🔇 Can't enable — your browser says no. Change it in settings!",
 ]
 
 export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
@@ -142,6 +147,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [toast, setToast] = useState(null)
   const [closedAlertTicket, setClosedAlertTicket] = useState(null)
   const [unclaiming, setUnclaiming] = useState(false)
+
+  // notification permission state
+  const [notifPermission, setNotifPermission] = useState(() => {
+    if (typeof Notification !== 'undefined') return Notification.permission
+    return 'unsupported'
+  })
+  const [enablingNotifs, setEnablingNotifs] = useState(false)
 
   // complaint modal state
   const [complaintOpen, setComplaintOpen] = useState(false)
@@ -309,12 +321,85 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     }
   }
 
-  // ── Show witty toast ──────────────────────────────────────────
-  const showWittyToast = () => {
-    playPop()
-    const msg = WITTY_MESSAGES[Math.floor(Math.random() * WITTY_MESSAGES.length)]
-    setToast(msg)
-    setTimeout(() => setToast(null), 3200)
+  // ── Enable notifications handler ─────────────────────────────
+  const handleEnableNotifications = async () => {
+    if (enablingNotifs) return
+
+    // Already granted
+    if (notifPermission === 'granted') {
+      playPop()
+      const msg = NOTIF_ENABLED_MESSAGES[Math.floor(Math.random() * NOTIF_ENABLED_MESSAGES.length)]
+      setToast(msg)
+      setTimeout(() => setToast(null), 3200)
+      return
+    }
+
+    // Denied — can't re-prompt
+    if (notifPermission === 'denied') {
+      playPop()
+      const msg = NOTIF_DENIED_MESSAGES[Math.floor(Math.random() * NOTIF_DENIED_MESSAGES.length)]
+      setToast(msg)
+      setTimeout(() => setToast(null), 3200)
+      return
+    }
+
+    // Default — request permission
+    setEnablingNotifs(true)
+    try {
+      const permission = await Notification.requestPermission()
+      setNotifPermission(permission)
+
+      if (permission === 'granted') {
+        // Register service worker and subscribe
+        let registration = await navigator.serviceWorker.getRegistration()
+        if (!registration) {
+          registration = await navigator.serviceWorker.register('/sw.js')
+        }
+        await navigator.serviceWorker.ready
+
+        const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+        if (publicVapidKey) {
+          const activeReg = await navigator.serviceWorker.ready
+          let sub = await activeReg.pushManager.getSubscription()
+          if (!sub) {
+            const padding = '='.repeat((4 - publicVapidKey.length % 4) % 4)
+            const base64 = (publicVapidKey + padding).replace(/-/g, '+').replace(/_/g, '/')
+            const rawData = window.atob(base64)
+            const appServerKey = new Uint8Array(rawData.length)
+            for (let i = 0; i < rawData.length; ++i) appServerKey[i] = rawData.charCodeAt(i)
+
+            sub = await activeReg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: appServerKey
+            })
+          }
+
+          // Upsert to Supabase
+          if (user?.rollno && sub) {
+            await supabase.from('push_subscriptions').upsert({
+              roll_number: user.rollno,
+              subscription: JSON.parse(JSON.stringify(sub))
+            }, { onConflict: 'roll_number' })
+          }
+        }
+
+        playPop()
+        const msg = NOTIF_ENABLED_MESSAGES[Math.floor(Math.random() * NOTIF_ENABLED_MESSAGES.length)]
+        setToast(msg)
+        setTimeout(() => setToast(null), 3200)
+      } else {
+        playPop()
+        const msg = NOTIF_DENIED_MESSAGES[Math.floor(Math.random() * NOTIF_DENIED_MESSAGES.length)]
+        setToast(msg)
+        setTimeout(() => setToast(null), 3200)
+      }
+    } catch (err) {
+      console.error('Error enabling notifications:', err)
+      setToast('⚠️ Something went wrong enabling notifications.')
+      setTimeout(() => setToast(null), 3200)
+    } finally {
+      setEnablingNotifs(false)
+    }
   }
 
   // ── Submit complaint handler ────────────────────────────────
@@ -397,12 +482,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
         {/* ── Quick Nav Buttons ── */}
         <div className="db-nav-row" id="dashboard-nav-row">
           <button
-            className="db-nav-btn"
-            onClick={showWittyToast}
+            className={`db-nav-btn ${notifPermission === 'granted' ? 'db-nav-notif-enabled' : notifPermission === 'denied' ? 'db-nav-notif-denied' : 'db-nav-notif-prompt'}`}
+            onClick={handleEnableNotifications}
+            disabled={enablingNotifs}
             id="nav-notifications"
           >
-            <Bell size={16} />
-            <span>Notifications</span>
+            {notifPermission === 'granted' ? <BellRing size={16} /> : notifPermission === 'denied' ? <BellOff size={16} /> : <Bell size={16} />}
+            <span>{enablingNotifs ? 'Enabling…' : notifPermission === 'granted' ? 'Notifs On' : notifPermission === 'denied' ? 'Blocked' : 'Enable Notifs'}</span>
           </button>
           <button
             className="db-nav-btn"
