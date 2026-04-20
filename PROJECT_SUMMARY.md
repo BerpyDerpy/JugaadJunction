@@ -1,23 +1,56 @@
-# Jugaad Junction
+# Jugaad Junction - Project Summary
 
-## Brief Project Description
-Jugaad Junction is a hyper-local, peer-to-peer resource exchange platform designed for student communities. It transforms the informal "jugaad" culture of helping each other with small favors (like lending a pen, sharing A4 sheets, or providing short notes) into a structured marketplace. The platform uses a social credit system to incentivize helpfulness and build a reputation-based status within the community.
+## Project Overview
+Jugaad Junction is a hyper-local, peer-to-peer resource exchange platform designed for student communities. It transforms the informal "jugaad" culture—helping each other with small favors (e.g., lending a pen, sharing A4 sheets, short notes)—into a structured, gamified marketplace. The platform uses a "Social Credit" system to incentivize helpfulness, track reputation, and foster a tightly-knit community.
 
-## Who It's For
-- **Primary Audience**: Students in a specific class or college campus.
-- **Secondary Audience**: Any closed-knit group where small favors and resource sharing are common but hard to track or reward.
+## Tech Stack & Architecture
+- **Frontend**: React.js with Vite (`/frontend`).
+- **Styling**: Vanilla CSS with a strong emphasis on a "Warm Cork Board" aesthetic, paper card designs, handwriting fonts (Caveat, Patrick Hand), and subtle float animations (`index.css`, component-specific CSS like `Marketplace.css` and `Dashboard.css`).
+- **Backend & Database**: Supabase (PostgreSQL) for database, real-time subscriptions, and authentication logic.
+- **Deployment**: Configured for deployment to GitHub Pages (managed via Vite's `base` path configurations).
 
-## Use Cases
-- **Emergency Resource Requests**: A student needing A4 sheets for an urgent lab submission can post a request.
-- **Peer-to-Peer Marketplace**: Selling used textbooks, lab equipment (like adaptors), or extra stationery.
-- **Service Exchange**: Trading favors like attendance help, sharing short notes, or "Leisure Buddy System" activities.
-- **Status Building**: Users earn "Social Credit" for fulfilling requests, which serves as a badge of honor and reliability in the class.
+## Key Features & Workflows
+1. **User Authentication & Profiles**:
+   - Users log in via their college `rollno` (e.g., 160124737141) and password. 
+   - A `StudentNames` table maintains real names for users, while `UserTable` holds authentication and social credit data.
+   - An interactive "Social Credit Wheel" visualizes a user's standing in the `Dashboard`.
 
-## Brief Implementation Details
-- **Frontend**: A modern, responsive web application built with **React.js** and **Vite**. It features a "Glassmorphism" design aesthetic with a card-based "bulletin board" layout.
-- **Backend & Database**: Powered by **Supabase (PostgreSQL)**. It utilizes real-time database capabilities to track ticket statuses and user social credit scores.
-- **Architecture**:
-    - **User Management**: Roll number-based authentication with session persistence.
-    - **Resource Logic**: A dual-tier table system (`TicketTable` for ownership and `TicketTableData` for metadata) handles the lifecycle of "Requests" and "Offers."
-    - **Status Workflow**: Tickets progress from `pending` -> `claimed` -> `closed`, with mechanisms for "bargaining" on already claimed items.
-    - **Gamification**: A dynamic **Social Credit Wheel** in the user dashboard reflects their standing based on platform activity.
+2. **Marketplace & Ticketing System** (`Marketplace.jsx`):
+   - Users can create two types of tickets: **Requests** (asking for help/items) and **Posts/Offers** (providing help/items).
+   - Tickets support pricing and inline negotiation via the `ItemPrice` field.
+   - **Ticket Lifecycle**: `pending` -> `claimed` -> `closed` (or `time barred`). 
+   - **Demand Visibility**: The system supports multiple claimants per ticket using the `TicketClaims` table, prominently displaying claimant counts on offer tickets to signal demand.
+
+3. **Dashboard & Ticket Management** (`Dashboard.jsx`):
+   - Users can view their created and claimed tickets.
+   - Users have the ability to "unclaim" tickets, releasing them back to the pending state.
+   - Includes a witty "feature not implemented" notification for the in-progress Notifications tab.
+
+4. **Self-Service Support & Admin Panel** (`AdminPanel.jsx`):
+   - Users can submit complaints directly from their Dashboard.
+   - Dedicated Admin User (`rollno: 9999`) has access to an `AdminPanel` to monitor complaints, manage user social credit scores manually, and resolve issues.
+
+## Database Schema (Supabase)
+Real-time capabilities are actively utilized via `supabase_realtime` publications for `TicketTable`, `TicketClaims`, and `ComplaintsTable`.
+
+- **`UserTable`**: `rollno` (PK), `password`, `username`, `social_credit` (0-100).
+- **`StudentNames`**: `rollno` (PK), `first_name` (standalone table for real names).
+- **`TicketTable`**: 
+  - `ticketid` (PK)
+  - `owner_rollno` (FK -> UserTable)
+  - `claimant_rollno` (FK -> UserTable, nullable)
+  - `type` ('request', 'post')
+  - `title`, `description`, `category`, `ItemPrice`
+  - `status` ('pending', 'claimed', 'closed', 'time barred')
+- **`TicketClaims`**: Tracks multi-claimants. `id` (PK), `ticketid` (FK), `claimant_rollno` (FK). Unique on `(ticketid, claimant_rollno)`.
+- **`ComplaintsTable`**: `id` (PK), `rollno` (FK), `subject`, `description`, `status` ('open', 'resolved').
+
+## Important Files & Directory Structure
+- `/frontend/src/`
+  - `App.jsx` / `main.jsx`: Application entry, routing, and high-level auth state management.
+  - `Dashboard.jsx`: User profile, ticket management, social credit wheel, and complaint submission.
+  - `Marketplace.jsx`: Core feed of tickets, creation modal, complex multi-claim logic, and inline negotiations.
+  - `AdminPanel.jsx`: Moderation interface for `rollno: 9999` to resolve complaints and tweak credit scores.
+  - `supabaseClient.js`: Supabase initialization and connection.
+  - CSS files: Emphasize animations, responsive grid layouts, and a warm cork board aesthetic.
+- `/frontend/supabase/schema_and_seed.sql`: Source of truth for database migrations, table relations, and dummy data generation.

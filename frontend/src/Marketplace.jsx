@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import {
   Search,
@@ -23,6 +24,7 @@ import {
   ThumbsUp,
   Ticket,
   CircleDollarSign,
+  UserCircle,
 } from 'lucide-react'
 import Dashboard from './Dashboard'
 import { usePushNotifications } from './usePushNotifications'
@@ -117,6 +119,7 @@ function TicketCard({ ticket, index, type, onClick, studentNames, user }) {
 
 // ─── Marketplace ────────────────────────────────────────────────
 export default function Marketplace({ user, onLogout, onToggleAdminView }) {
+  const navigate = useNavigate()
   // Setup push notifications based on user
   usePushNotifications(user?.rollno)
 
@@ -756,10 +759,16 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
                     {selectedTicket.claims.map((claim, idx) => {
                       const uname = claim.UserTable?.username || claim.user?.username || claim.claimant_rollno
                       return (
-                        <li key={idx}>
+                        <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <NameTag username={uname} realName={studentNames?.[claim.claimant_rollno]} className="mp-detail-nametag" style={{ color: (selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? '#991b1b' : '#15803d' }}>
                             <strong>@{uname}</strong>
                           </NameTag>
+                          <UserCircle
+                            size={15}
+                            style={{ color: (selectedTicket.type === 'post' && selectedTicket.claims.length >= 3) ? '#991b1b' : '#15803d', cursor: 'pointer', flexShrink: 0, opacity: 0.7, transition: 'opacity 0.2s' }}
+                            onClick={() => { setSelectedTicket(null); navigate(`/profile/${claim.claimant_rollno}`) }}
+                            title="View profile"
+                          />
                         </li>
                       )
                     })}
@@ -774,6 +783,13 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
               <span className="mp-detail-posted-by">
                 Posted by <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag>
               </span>
+              <UserCircle
+                size={18}
+                style={{ color: '#8b7355', cursor: 'pointer', marginLeft: 6, flexShrink: 0, transition: 'color 0.2s' }}
+                onClick={() => { setSelectedTicket(null); navigate(`/profile/${selectedTicket.ownerRollno}`) }}
+                title="View profile"
+                id="detail-profile-link-owner"
+              />
             </div>
 
             {/* ── Claimed state ── */}

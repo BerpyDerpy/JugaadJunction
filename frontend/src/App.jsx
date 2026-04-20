@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { Lock, User, AlertCircle, Sparkles, PartyPopper } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { generateAbsurdDisgustingNickname } from './nicknameGenerator'
 import Marketplace from './Marketplace'
 import AdminPanel from './AdminPanel'
+import Profile from './Profile'
 import {
   initAudio, playSuccess, playError, playClick, playPop,
   playRevealIntro, playRevealCeremony, playRevealSlam,
@@ -196,6 +198,12 @@ function WelcomeReveal({ realName, nickname, onContinue }) {
   )
 }
 
+// ─── Auth-guarded route wrapper ─────────────────────────────────
+function RequireAuth({ user, children }) {
+  if (!user) return <Navigate to="/" replace />
+  return children
+}
+
 // ─── Main App ───────────────────────────────────────────────────
 function App() {
   const [rollno, setRollno] = useState('')
@@ -324,6 +332,14 @@ function App() {
     }
   }
 
+  const handleLogout = () => {
+    setUser(null)
+    setRollno('')
+    setPassword('')
+    localStorage.removeItem('jj_user')
+    setAdminMode('admin')
+  }
+
   // If showing welcome reveal
   if (showWelcome && welcomeData) {
     return (
@@ -335,128 +351,135 @@ function App() {
     )
   }
 
-  // If user is logged in, route admin vs regular user
-  if (user) {
-    if (user.rollno === '9999' && adminMode === 'admin') {
-      return (
-        <AdminPanel
-          user={user}
-          onLogout={() => {
-            setUser(null)
-            setRollno('')
-            setPassword('')
-            localStorage.removeItem('jj_user')
-            setAdminMode('admin')
-          }}
-          onToggleView={() => setAdminMode('marketplace')}
-        />
-      )
-    }
+  // If user is not logged in, show login form (no router needed here)
+  if (!user) {
     return (
-      <Marketplace
-        user={user}
-        onLogout={() => {
-          setUser(null)
-          setRollno('')
-          setPassword('')
-          localStorage.removeItem('jj_user')
-          setAdminMode('admin')
-        }}
-        onToggleAdminView={user.rollno === '9999' ? () => setAdminMode('admin') : undefined}
-      />
+      <div className="login-container">
+        {/* warm floating blobs */}
+        <div className="background-spheres">
+          <div className="sphere sphere-1"></div>
+          <div className="sphere sphere-2"></div>
+          <div className="sphere sphere-3"></div>
+        </div>
+
+        <div className="login-card">
+          <div className="login-header">
+            <div className="login-logo-container">
+              📌
+            </div>
+            <h1 className="login-title">Jugaad Junction</h1>
+            <p className="login-subtitle">The unofficial exchange of all things essential</p>
+          </div>
+
+          <form className="login-form" onSubmit={(e) => { initAudio(); handleAuth(e) }}>
+            {error && (
+              <div className="error-message">
+                <AlertCircle size={18} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="rollno">Roll Number</label>
+              <div className="input-wrapper">
+                <User className="input-icon" size={18} />
+                <input
+                  id="rollno"
+                  type="text"
+                  className="form-input"
+                  placeholder="ex: 160124737***"
+                  value={rollno}
+                  onChange={(e) => setRollno(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      document.getElementById('password')?.focus();
+                    }
+                  }}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <Lock className="input-icon" size={18} />
+                <input
+                  id="password"
+                  type="password"
+                  className="form-input"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAuth(e)}
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="btn-loading">
+                  <span className="btn-spinner" />
+                  {isSignUp ? 'Generating your fate...' : 'Authenticating...'}
+                </span>
+              ) : (
+                isSignUp ? 'Sign Up' : 'Sign In'
+              )}
+            </button>
+
+            <div className="auth-toggle">
+              <span onClick={() => { setIsSignUp(!isSignUp); setError(null) }}>
+                {isSignUp
+                  ? "Already have a name? Sign in"
+                  : "Fresh meat? Sign up"}
+              </span>
+            </div>
+          </form>
+        </div>
+      </div>
     )
   }
 
+  // ── Authenticated: use React Router ───────────────────────────
   return (
-    <div className="login-container">
-      {/* warm floating blobs */}
-      <div className="background-spheres">
-        <div className="sphere sphere-1"></div>
-        <div className="sphere sphere-2"></div>
-        <div className="sphere sphere-3"></div>
-      </div>
-
-      <div className="login-card">
-        <div className="login-header">
-          <div className="login-logo-container">
-            📌
-          </div>
-          <h1 className="login-title">Jugaad Junction</h1>
-          <p className="login-subtitle">The unofficial exchange of all things essential</p>
-        </div>
-
-        <form className="login-form" onSubmit={(e) => { initAudio(); handleAuth(e) }}>
-          {error && (
-            <div className="error-message">
-              <AlertCircle size={18} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="rollno">Roll Number</label>
-            <div className="input-wrapper">
-              <User className="input-icon" size={18} />
-              <input
-                id="rollno"
-                type="text"
-                className="form-input"
-                placeholder="ex: 160124737***"
-                value={rollno}
-                onChange={(e) => setRollno(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    document.getElementById('password')?.focus();
-                  }
-                }}
-                required
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            user.rollno === '9999' && adminMode === 'admin' ? (
+              <AdminPanel
+                user={user}
+                onLogout={handleLogout}
+                onToggleView={() => setAdminMode('marketplace')}
               />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">Password</label>
-            <div className="input-wrapper">
-              <Lock className="input-icon" size={18} />
-              <input
-                id="password"
-                type="password"
-                className="form-input"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAuth(e)}
-                required
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="submit-btn"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="btn-loading">
-                <span className="btn-spinner" />
-                {isSignUp ? 'Generating your fate...' : 'Authenticating...'}
-              </span>
             ) : (
-              isSignUp ? 'Sign Up' : 'Sign In'
-            )}
-          </button>
-
-          <div className="auth-toggle">
-            <span onClick={() => { setIsSignUp(!isSignUp); setError(null) }}>
-              {isSignUp
-                ? "Already have a name? Sign in"
-                : "Fresh meat? Sign up"}
-            </span>
-          </div>
-        </form>
-      </div>
-    </div>
+              <Marketplace
+                user={user}
+                onLogout={handleLogout}
+                onToggleAdminView={user.rollno === '9999' ? () => setAdminMode('admin') : undefined}
+              />
+            )
+          }
+        />
+        <Route
+          path="/profile/:rollno"
+          element={
+            <RequireAuth user={user}>
+              <Profile user={user} />
+            </RequireAuth>
+          }
+        />
+        {/* catch-all: redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 

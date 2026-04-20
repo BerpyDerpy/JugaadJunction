@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import {
   X,
@@ -13,6 +14,7 @@ import {
   Undo2,
   MessageSquareWarning,
   Send,
+  UserCircle,
 } from 'lucide-react'
 import React from 'react'
 import { playPop, playClose, playClaim } from './sounds'
@@ -128,6 +130,7 @@ const WITTY_MESSAGES = [
 ]
 
 export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
+  const navigate = useNavigate()
   const [tickets, setTickets] = useState([]) // owned tickets
   const [claimedTickets, setClaimedTickets] = useState([]) // tickets claimed by user
   const [loading, setLoading] = useState(true)
@@ -412,6 +415,14 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
           >
             <MessageSquareWarning size={16} />
             <span>Complaint</span>
+          </button>
+          <button
+            className="db-nav-btn"
+            onClick={() => { onClose(); navigate(`/profile/${user.rollno}`) }}
+            id="nav-profile"
+          >
+            <UserCircle size={16} />
+            <span>Profile</span>
           </button>
         </div>
 
