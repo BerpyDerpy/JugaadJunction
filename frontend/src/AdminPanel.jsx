@@ -118,7 +118,7 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
     const newValue = editedCredits[rollno]
     if (newValue === undefined || newValue === null) return
 
-    const clamped = Math.max(0, Math.min(100, parseInt(newValue, 10)))
+    const clamped = Math.max(-150, Math.min(10000, parseInt(newValue, 10)))
     if (isNaN(clamped)) return
 
     try {
@@ -361,8 +361,8 @@ export default function AdminPanel({ user, onLogout, onToggleView }) {
                           <div className="admin-credit-edit">
                             <input
                               type="number"
-                              min="0"
-                              max="100"
+                              min="-150"
+                              max="10000"
                               className="admin-credit-input"
                               value={displayValue}
                               onChange={(e) => setEditedCredits(prev => ({

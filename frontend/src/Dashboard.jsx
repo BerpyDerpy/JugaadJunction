@@ -18,6 +18,7 @@ import {
   MessageSquareWarning,
   Send,
   UserCircle,
+  Smartphone,
 } from 'lucide-react'
 import React from 'react'
 import { playPop, playClose, playClaim } from './sounds'
@@ -31,18 +32,17 @@ const PIN_COLORS = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orang
 function pick(arr, i) { return arr[i % arr.length] }
 
 // ── Credit Score Wheel ─────────────────────────────────────────
-function CreditWheel({ score, max = 100 }) {
-  ``
+function CreditWheel({ score, max = 10000, min = -150 }) {
   const radius = 38
   const stroke = 7
   const circumference = 2 * Math.PI * radius
-  const pct = Math.min(score / max, 1)
+  const pct = Math.max(0, Math.min((score - min) / (max - min), 1))
   const offset = circumference * (1 - pct)
 
-  // color based on score
+  // color based on absolute score thresholds
   let color = '#ef4444' // red
-  if (pct > 0.7) color = '#22c55e' // green
-  else if (pct > 0.4) color = '#eab308' // yellow
+  if (score >= 70) color = '#22c55e' // green
+  else if (score >= 30) color = '#eab308' // yellow
 
   return (
     <div className="db-credit-wheel" id="credit-score-wheel">
@@ -150,7 +150,10 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [unclaiming, setUnclaiming] = useState(false)
 
   // notification state
-  const { isSupported, permissionStatus, subscription, subscribe, unsubscribe, loading: notifLoading } = usePushNotifications(user?.rollno)
+  const { isSupported, permissionStatus, subscription, subscribe, unsubscribe, loading: notifLoading, needsInstall, isIos } = usePushNotifications(user?.rollno)
+
+  // iOS install banner state
+  const [showInstallGuide, setShowInstallGuide] = useState(false)
 
   // complaint modal state
   const [complaintOpen, setComplaintOpen] = useState(false)
@@ -322,6 +325,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const handleToggleNotifications = async () => {
     if (notifLoading) return
 
+    // iOS users who haven't installed the PWA — show install guide instead
+    if (needsInstall) {
+      playPop()
+      setShowInstallGuide(true)
+      return
+    }
+
     // Denied — can't re-prompt
     if (permissionStatus === 'denied') {
       playPop()
@@ -437,13 +447,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
         {/* ── Quick Nav Buttons ── */}
         <div className="db-nav-row" id="dashboard-nav-row">
           <button
-            className={`db-nav-btn ${subscription ? 'db-nav-notif-enabled' : permissionStatus === 'denied' ? 'db-nav-notif-denied' : 'db-nav-notif-prompt'}`}
+            className={`db-nav-btn ${needsInstall ? 'db-nav-notif-install' : subscription ? 'db-nav-notif-enabled' : permissionStatus === 'denied' ? 'db-nav-notif-denied' : 'db-nav-notif-prompt'}`}
             onClick={handleToggleNotifications}
             disabled={notifLoading}
             id="nav-notifications"
           >
-            {subscription ? <BellRing size={16} /> : permissionStatus === 'denied' ? <BellOff size={16} /> : <Bell size={16} />}
-            <span>{notifLoading ? 'Loading…' : subscription ? 'Notifs On' : permissionStatus === 'denied' ? 'Blocked' : 'Enable Notifs'}</span>
+            {needsInstall ? <Smartphone size={16} /> : subscription ? <BellRing size={16} /> : permissionStatus === 'denied' ? <BellOff size={16} /> : <Bell size={16} />}
+            <span>{notifLoading ? 'Loading…' : needsInstall ? 'Install App' : subscription ? 'Notifs On' : permissionStatus === 'denied' ? 'Blocked' : 'Enable Notifs'}</span>
           </button>
           <button
             className="db-nav-btn"
@@ -788,6 +798,89 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── iOS Install Guide Modal ── */}
+      {showInstallGuide && (
+        <div
+          className="mp-modal-overlay"
+          onClick={() => setShowInstallGuide(false)}
+          id="ios-install-guide-overlay"
+          style={{ zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            className="db-ios-install-guide"
+            onClick={e => e.stopPropagation()}
+            id="ios-install-guide"
+          >
+            <button
+              className="db-close-btn"
+              onClick={() => setShowInstallGuide(false)}
+              style={{ position: 'absolute', top: '12px', right: '12px' }}
+            >
+              <X size={16} />
+            </button>
+
+            <div className="db-ios-install-header">
+              <Smartphone size={32} className="db-ios-install-icon" />
+              <h3>Install Jugaad Junction</h3>
+              <p>
+                To get push notifications on {isIos ? 'your iPhone/iPad' : 'this device'},
+                you need to add Jugaad Junction to your Home Screen first.
+              </p>
+            </div>
+
+            <div className="db-ios-install-steps">
+              <div className="db-ios-step">
+                <div className="db-ios-step-num">1</div>
+                <div className="db-ios-step-content">
+                  <strong>Tap the Share button</strong>
+                  <span>The square with an arrow at the bottom of Safari</span>
+                  <div className="db-ios-step-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                      <polyline points="16 6 12 2 8 6"/>
+                      <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="db-ios-step">
+                <div className="db-ios-step-num">2</div>
+                <div className="db-ios-step-content">
+                  <strong>Tap "Add to Home Screen"</strong>
+                  <span>Scroll down in the share sheet if you don't see it</span>
+                  <div className="db-ios-step-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="12" y1="8" x2="12" y2="16"/>
+                      <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="db-ios-step">
+                <div className="db-ios-step-num">3</div>
+                <div className="db-ios-step-content">
+                  <strong>Open from Home Screen</strong>
+                  <span>Then tap "Enable Notifs" in the Dashboard</span>
+                  <div className="db-ios-step-icon">
+                    <Bell size={22} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              className="db-ios-install-dismiss"
+              onClick={() => setShowInstallGuide(false)}
+            >
+              Got it!
+            </button>
           </div>
         </div>
       )}

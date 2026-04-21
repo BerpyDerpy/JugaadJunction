@@ -28,16 +28,16 @@ const PIN_COLORS = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orang
 function pick(arr, i) { return arr[i % arr.length] }
 
 // ── Credit Wheel (reused from Dashboard logic) ─────────────────
-function CreditWheel({ score, max = 100 }) {
+function CreditWheel({ score, max = 10000, min = -150 }) {
   const radius = 38
   const stroke = 7
   const circumference = 2 * Math.PI * radius
-  const pct = Math.min(score / max, 1)
+  const pct = Math.max(0, Math.min((score - min) / (max - min), 1))
   const offset = circumference * (1 - pct)
 
   let color = '#ef4444'
-  if (pct > 0.7) color = '#22c55e'
-  else if (pct > 0.4) color = '#eab308'
+  if (score >= 70) color = '#22c55e'
+  else if (score >= 30) color = '#eab308'
 
   return (
     <div className="db-credit-wheel" id="profile-credit-wheel">

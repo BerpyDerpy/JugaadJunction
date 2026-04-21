@@ -16,6 +16,23 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+// ── Platform detection helpers ──────────────────────────────────
+function getIsIos() {
+  const ua = navigator.userAgent || '';
+  return /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function getIsInStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function getIsSafariBrowser() {
+  const ua = navigator.userAgent || '';
+  // Safari but NOT Chrome/Firefox/Edge (which all contain "Safari" in their UA on iOS)
+  const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+  return isSafari;
+}
+
 export function usePushNotifications(rollno) {
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState(null);
@@ -24,6 +41,14 @@ export function usePushNotifications(rollno) {
   const [permissionStatus, setPermissionStatus] = useState(() => {
     return typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
   });
+
+  // iOS / standalone / Safari detection
+  const [isIos] = useState(getIsIos);
+  const [isInStandaloneMode] = useState(getIsInStandaloneMode);
+  const [isSafariBrowser] = useState(getIsSafariBrowser);
+
+  // True when the user is on iOS but hasn't added to home screen yet
+  const needsInstall = isIos && !isInStandaloneMode;
 
   useEffect(() => {
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
@@ -48,6 +73,18 @@ export function usePushNotifications(rollno) {
   };
 
   const subscribe = async () => {
+    // ── Guard: never request permission in Safari (non-PWA) ──
+    // Safari ignores the push permission prompt unless running as an installed PWA.
+    // Requesting it wastes the one-time prompt opportunity.
+    if (isSafariBrowser && !isInStandaloneMode) {
+      const msg = isIos
+        ? 'Add this site to your Home Screen first, then enable notifications from there.'
+        : 'Push notifications require the app to be installed. Add to Home Screen first.';
+      setError(msg);
+      console.warn('Push: blocked permission request in Safari (not standalone).', msg);
+      return false;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -128,5 +165,19 @@ export function usePushNotifications(rollno) {
     }
   };
 
-  return { isSupported, permissionStatus, subscription, subscribe, unsubscribe, loading, error };
+  return {
+    isSupported,
+    permissionStatus,
+    subscription,
+    subscribe,
+    unsubscribe,
+    loading,
+    error,
+    // iOS / PWA awareness
+    isIos,
+    isInStandaloneMode,
+    isSafariBrowser,
+    needsInstall,
+  };
 }
+

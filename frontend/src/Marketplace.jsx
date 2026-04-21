@@ -1011,7 +1011,7 @@ export default function Marketplace({ user, onLogout, onToggleAdminView }) {
                 <div>
                   <h3 className="mp-help-section-title">Social Credit</h3>
                   <p className="mp-help-section-text">
-                    Every user starts with 100 Social Credit. Help people and your
+                    Every user starts with 100 Social Credit (max 10,000). Help people and your
                     reputation grows. Annoy people and the admin might have fun with your score.
                   </p>
                 </div>

@@ -971,3 +971,167 @@
   border-color: rgba(239, 68, 68, 0.3);
   color: #fca5a5;
 }
+
+/* ============================================
+   iOS INSTALL GUIDE – Add to Home Screen
+   ============================================ */
+
+/* ---------- install button accent ---------- */
+.db-nav-notif-install {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #93c5fd !important;
+  animation: installPulse 2s ease-in-out infinite;
+}
+
+.db-nav-notif-install:hover {
+  animation: none;
+  background: rgba(59, 130, 246, 0.18) !important;
+  border-color: rgba(59, 130, 246, 0.55) !important;
+  color: #bfdbfe !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+@keyframes installPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  50% { box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.15); }
+}
+
+/* ---------- install guide card ---------- */
+.db-ios-install-guide {
+  width: 100%;
+  max-width: 400px;
+  background: #3d2013;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E");
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  border-radius: 24px;
+  padding: 32px 28px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(245, 230, 211, 0.05),
+    0 0 60px rgba(59, 130, 246, 0.08);
+  animation: iosGuideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes iosGuideIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- header ---------- */
+.db-ios-install-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.db-ios-install-icon {
+  color: #60a5fa;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+}
+
+.db-ios-install-header h3 {
+  font-family: 'Caveat', cursive;
+  font-size: 30px;
+  font-weight: 700;
+  color: #f5e6d3;
+  margin: 0 0 10px 0;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.db-ios-install-header p {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: #a38568;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---------- steps ---------- */
+.db-ios-install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.db-ios-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(245, 230, 211, 0.05);
+  border: 1px solid rgba(245, 230, 211, 0.1);
+  transition: all 0.25s ease;
+}
+
+.db-ios-step:hover {
+  background: rgba(245, 230, 211, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.db-ios-step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.35);
+}
+
+.db-ios-step-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.db-ios-step-content strong {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  color: #f5e6d3;
+  font-weight: 600;
+}
+
+.db-ios-step-content span {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  color: #a38568;
+  line-height: 1.4;
+}
+
+.db-ios-step-icon {
+  margin-top: 6px;
+  color: #60a5fa;
+  opacity: 0.7;
+}
+
+/* ---------- dismiss button ---------- */
+.db-ios-install-dismiss {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+}
+
+.db-ios-install-dismiss:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+}
