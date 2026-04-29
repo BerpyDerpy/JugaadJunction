@@ -65,6 +65,7 @@ serve(async (req) => {
     const notificationPayload = JSON.stringify({ title, body });
 
     let sentCount = 0;
+    const errors: any[] = [];
     const pushPromises = subscriptions
       .filter((sub) => !exclude_rollno || sub.roll_number !== exclude_rollno)
       .map(async (sub) => {
@@ -74,6 +75,7 @@ serve(async (req) => {
           console.log(`Push sent to ${sub.roll_number}`);
         } catch (err) {
           console.error(`Failed to send push to ${sub.roll_number}:`, err);
+          errors.push({ roll_number: sub.roll_number, error: err.message, stack: err.stack, name: err.name });
           // Clean up expired subscriptions (only remove the specific device endpoint)
           if (err.statusCode === 410 || err.statusCode === 404) {
             const endpoint = sub.subscription?.endpoint;
@@ -97,13 +99,13 @@ serve(async (req) => {
     await Promise.all(pushPromises);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Notifications dispatched", sent: sentCount }),
+      JSON.stringify({ success: true, message: "Notifications dispatched", sent: sentCount, errors }),
       { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   } catch (err) {
     console.error("Error in send-push:", err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: err.message, stack: err.stack }),
       { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
