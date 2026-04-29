@@ -229,6 +229,74 @@
 .mp-ticket.variant-pink   { background: #fce8ef; }
 .mp-ticket.variant-green  { background: #e8f5e9; }
 
+/* ── approved card darkening (warm dark brown for approved claimants) ── */
+.mp-ticket.mp-ticket-approved-dim {
+  position: relative;
+  box-shadow:
+    2px 3px 12px rgba(0, 0, 0, 0.35),
+    inset 0 0 30px rgba(80, 50, 20, 0.2),
+    0 0 0 2px rgba(180, 120, 60, 0.45);
+}
+
+.mp-ticket.mp-ticket-approved-dim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: rgba(60, 30, 10, 0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mp-ticket.mp-ticket-approved-dim.variant-cream  { background: #c4a882; }
+.mp-ticket.mp-ticket-approved-dim.variant-blue   { background: #b5a08a; }
+.mp-ticket.mp-ticket-approved-dim.variant-yellow  { background: #c8b08a; }
+.mp-ticket.mp-ticket-approved-dim.variant-pink    { background: #c0a090; }
+.mp-ticket.mp-ticket-approved-dim.variant-green   { background: #a8a07a; }
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-title {
+  color: #2c1810;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-desc {
+  color: #3a2415;
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-id {
+  color: #5a3d28;
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-category {
+  background: rgba(60, 30, 10, 0.2);
+  color: #4a2c12;
+  border-color: rgba(60, 30, 10, 0.3);
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-price {
+  background: rgba(16, 185, 129, 0.2);
+  color: #0a5c3a;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-footer {
+  border-top-color: rgba(60, 30, 10, 0.3);
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-user {
+  color: #3a2415;
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-ticket-user-dot {
+  background: #8b5e3c;
+}
+
+.mp-ticket.mp-ticket-approved-dim .mp-status {
+  background: rgba(60, 30, 10, 0.15);
+  color: #2c1810;
+  border-color: rgba(60, 30, 10, 0.3);
+}
+
 /* push-pin dot */
 .mp-pin {
   position: absolute;
@@ -444,6 +512,119 @@
   background: #e5e7eb;
   color: #6b7280;
   border: 1px solid #d1d5db;
+}
+
+.mp-status.approved {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  text-shadow: 0 0 1px rgba(6, 95, 70, 0.15);
+}
+
+.mp-status.paid {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+  text-shadow: 0 0 1px rgba(146, 64, 14, 0.1);
+}
+
+.mp-status.youve-paid {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+  border: 1px solid #ca8a04;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 6px rgba(217, 119, 6, 0.35);
+  font-size: 10px;
+}
+
+/* ── approve button (inline next to claimant names) ── */
+.mp-approve-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(217, 119, 6, 0.35);
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.mp-approve-btn:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #16a34a;
+  transform: scale(1.15);
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.25);
+}
+
+.mp-approve-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── approved label ── */
+.mp-approved-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #059669;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  animation: approvedPulse 0.5s ease;
+}
+
+@keyframes approvedPulse {
+  0% { transform: scale(0.85); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── approved banner ── */
+.mp-detail-approved-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 28px 12px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+  border: 2px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: bannerFadeIn 0.4s ease;
+}
+
+.mp-detail-approved-icon {
+  color: #059669;
+  flex-shrink: 0;
+  margin-top: 2px;
+  filter: drop-shadow(0 0 4px rgba(5, 150, 105, 0.4));
+}
+
+.mp-detail-approved-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mp-detail-approved-text strong {
+  font-size: 15px;
+  color: #065f46;
+}
+
+.mp-detail-approved-text span {
+  font-size: 13px;
+  color: #047857;
 }
 
 /* ---------- empty state ---------- */
@@ -1277,7 +1458,8 @@
   }
 
   .mp-detail-claimed-banner,
-  .mp-detail-bargain {
+  .mp-detail-bargain,
+  .mp-detail-approved-banner {
     margin-left: 20px;
     margin-right: 20px;
   }
@@ -1578,4 +1760,726 @@
   .mp-help-section-text {
     font-size: 13px;
   }
+}
+
+/* ============================================
+   CREDIT SCORE BADGES – Inline Score Indicators
+   ============================================ */
+
+/* ---------- base badge ---------- */
+.credit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+}
+
+.credit-badge:hover {
+  transform: scale(1.08);
+}
+
+.credit-badge-icon {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.credit-badge-value {
+  letter-spacing: 0.3px;
+}
+
+/* ---------- size variants ---------- */
+.credit-badge.credit-xs {
+  font-size: 10px;
+  padding: 1px 5px;
+  gap: 2px;
+  border-radius: 10px;
+}
+
+.credit-badge.credit-xs .credit-badge-icon {
+  font-size: 8px;
+}
+
+.credit-badge.credit-sm {
+  font-size: 11px;
+  padding: 2px 7px;
+  gap: 3px;
+}
+
+.credit-badge.credit-sm .credit-badge-icon {
+  font-size: 9px;
+}
+
+.credit-badge.credit-md {
+  font-size: 13px;
+  padding: 3px 10px;
+  gap: 4px;
+}
+
+.credit-badge.credit-md .credit-badge-icon {
+  font-size: 11px;
+}
+
+/* ---------- color tiers ---------- */
+
+/* excellent: 80+ — emerald green with gold star */
+.credit-badge.credit-excellent {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.12));
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #059669;
+  box-shadow: 0 1px 6px rgba(16, 185, 129, 0.15);
+}
+
+.credit-badge.credit-excellent .credit-badge-icon {
+  color: #d97706;
+  filter: drop-shadow(0 0 2px rgba(217, 119, 6, 0.5));
+}
+
+.credit-badge.credit-excellent:hover {
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+/* good: 60-79 — cool blue */
+.credit-badge.credit-good {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1));
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #2563eb;
+  box-shadow: 0 1px 6px rgba(59, 130, 246, 0.12);
+}
+
+.credit-badge.credit-good .credit-badge-icon {
+  color: #3b82f6;
+}
+
+.credit-badge.credit-good:hover {
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.55);
+}
+
+/* fair: 40-59 — warm amber */
+.credit-badge.credit-fair {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1));
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #b45309;
+  box-shadow: 0 1px 6px rgba(245, 158, 11, 0.12);
+}
+
+.credit-badge.credit-fair .credit-badge-icon {
+  color: #d97706;
+}
+
+.credit-badge.credit-fair:hover {
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+/* low: 20-39 — burnt orange */
+.credit-badge.credit-low {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1));
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #c2410c;
+  box-shadow: 0 1px 6px rgba(249, 115, 22, 0.12);
+}
+
+.credit-badge.credit-low .credit-badge-icon {
+  color: #ea580c;
+}
+
+.credit-badge.credit-low:hover {
+  box-shadow: 0 2px 12px rgba(249, 115, 22, 0.25);
+  border-color: rgba(249, 115, 22, 0.55);
+}
+
+/* poor: 0-19 — danger red */
+.credit-badge.credit-poor {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #dc2626;
+  box-shadow: 0 1px 6px rgba(239, 68, 68, 0.12);
+}
+
+.credit-badge.credit-poor .credit-badge-icon {
+  color: #ef4444;
+  animation: creditPoorPulse 2s ease-in-out infinite;
+}
+
+.credit-badge.credit-poor:hover {
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+/* unknown / null score */
+.credit-badge.credit-unknown {
+  background: rgba(139, 115, 85, 0.08);
+  border-color: rgba(139, 115, 85, 0.2);
+  color: #8b7355;
+  opacity: 0.7;
+}
+
+.credit-badge.credit-unknown:hover {
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.15);
+}
+
+/* ---------- animations ---------- */
+@keyframes creditPoorPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ---------- dark context overrides (dashboard panel) ---------- */
+.db-panel .credit-badge.credit-excellent,
+.db-overlay .credit-badge.credit-excellent {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.db-panel .credit-badge.credit-excellent .credit-badge-icon,
+.db-overlay .credit-badge.credit-excellent .credit-badge-icon {
+  color: #fbbf24;
+}
+
+.db-panel .credit-badge.credit-good,
+.db-overlay .credit-badge.credit-good {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.db-panel .credit-badge.credit-fair,
+.db-overlay .credit-badge.credit-fair {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15));
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.db-panel .credit-badge.credit-low,
+.db-overlay .credit-badge.credit-low {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.15));
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.db-panel .credit-badge.credit-poor,
+.db-overlay .credit-badge.credit-poor {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15));
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.db-panel .credit-badge.credit-unknown,
+.db-overlay .credit-badge.credit-unknown {
+  background: rgba(245, 230, 211, 0.06);
+  border-color: rgba(245, 230, 211, 0.12);
+  color: #a38568;
+}
+
+/* ============================================
+   UPI PROMPT – Darker Brown Card
+   ============================================ */
+
+.mp-upi-prompt {
+  width: 100%;
+  max-width: 380px;
+  background: #2c1810;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  border: 1.5px solid rgba(217, 119, 6, 0.25);
+  border-radius: 22px;
+  padding: 32px 28px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(245, 230, 211, 0.04),
+    0 0 40px rgba(217, 119, 6, 0.06);
+  animation: upiPromptIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  text-align: center;
+}
+
+@keyframes upiPromptIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mp-upi-prompt-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 18px rgba(217, 119, 6, 0.4);
+}
+
+.mp-upi-prompt-title {
+  font-family: 'Caveat', cursive;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f5e6d3;
+  margin: 0 0 8px 0;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.mp-upi-prompt-desc {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: #a38568;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+}
+
+.mp-upi-prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.mp-upi-prompt-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(217, 119, 6, 0.35);
+  background: rgba(245, 230, 211, 0.06);
+  color: #f5e6d3;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.mp-upi-prompt-input:focus {
+  border-color: rgba(217, 119, 6, 0.65);
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+}
+
+.mp-upi-prompt-input::placeholder {
+  color: #8b7355;
+  font-weight: 400;
+}
+
+.mp-upi-prompt-hint {
+  font-size: 12px;
+  color: #8b7355;
+  font-style: italic;
+  padding-left: 2px;
+}
+
+.mp-upi-prompt-hint::before {
+  content: '💡 ';
+  font-size: 11px;
+}
+
+.mp-upi-prompt-error {
+  font-size: 13px;
+  color: #f87171;
+  font-weight: 500;
+  padding: 6px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  animation: upiShake 0.35s ease;
+}
+
+@keyframes upiShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+.mp-upi-prompt-save {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: white;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.35);
+}
+
+.mp-upi-prompt-save:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.4);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.mp-upi-prompt-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================
+   FUNKY APPROVED BADGE – Visible to All Users
+   ============================================ */
+
+.mp-approved-funky {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #10b981, #059669, #047857);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4), 0 0 12px rgba(16, 185, 129, 0.2);
+  animation: funkyApprovedIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), funkyGlow 2s ease-in-out infinite alternate;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.mp-approved-funky::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: funkyShimmer 3s ease-in-out infinite;
+}
+
+@keyframes funkyApprovedIn {
+  0% { transform: scale(0.4) rotate(-15deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes funkyGlow {
+  from { box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4), 0 0 12px rgba(16, 185, 129, 0.15); }
+  to { box-shadow: 0 2px 14px rgba(16, 185, 129, 0.6), 0 0 24px rgba(16, 185, 129, 0.3); }
+}
+
+@keyframes funkyShimmer {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+/* ── Approved Claimant Count Badge (purple/violet – contrasts from green/red claim count) ── */
+.mp-ticket-approved-count {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  display: inline-block;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  margin-top: 4px;
+}
+
+/* ============================================
+   FUNKY PAID BADGE – Visible in claim lists
+   ============================================ */
+
+.mp-paid-funky {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f59e0b, #d97706, #b45309);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4), 0 0 12px rgba(245, 158, 11, 0.2);
+  animation: funkyApprovedIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), funkyPaidGlow 2s ease-in-out infinite alternate;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.mp-paid-funky::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: funkyShimmer 3s ease-in-out infinite;
+}
+
+@keyframes funkyPaidGlow {
+  from { box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4), 0 0 12px rgba(245, 158, 11, 0.15); }
+  to { box-shadow: 0 2px 14px rgba(245, 158, 11, 0.6), 0 0 24px rgba(245, 158, 11, 0.3); }
+}
+
+/* ── Paid Banner (shown to payer in detail popup) ── */
+.mp-detail-paid-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 28px 12px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1));
+  border: 2px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: bannerFadeIn 0.4s ease;
+}
+
+.mp-detail-paid-icon {
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+  filter: drop-shadow(0 0 4px rgba(217, 119, 6, 0.4));
+}
+
+.mp-detail-paid-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mp-detail-paid-text strong {
+  font-size: 15px;
+  color: #92400e;
+}
+
+.mp-detail-paid-text span {
+  font-size: 13px;
+  color: #b45309;
+}
+
+/* ============================================
+   PER-CLAIMANT CLOSE BUTTON
+   ============================================ */
+
+.mp-close-for-claimant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.mp-close-for-claimant-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #b91c1c;
+  transform: scale(1.05);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
+}
+
+/* ============================================
+   CLOSE CONFIRM POPUP – High Contrast Card
+   ============================================ */
+
+.mp-close-confirm-card {
+  width: 100%;
+  max-width: 340px;
+  background: #0a0a0a;
+  border: 2px solid rgba(239, 68, 68, 0.45);
+  border-radius: 22px;
+  padding: 28px 24px 24px;
+  text-align: center;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 50px rgba(239, 68, 68, 0.12);
+  animation: closeConfirmIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes closeConfirmIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.93); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mp-close-confirm-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.mp-close-confirm-x:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.mp-close-confirm-emoji {
+  font-size: 40px;
+  margin-bottom: 12px;
+  animation: closeConfirmPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes closeConfirmPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+.mp-close-confirm-title {
+  font-family: 'Caveat', cursive;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px 0;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.mp-close-confirm-desc {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+  margin: 0 0 18px 0;
+}
+
+.mp-close-confirm-desc strong {
+  color: #fca5a5;
+}
+
+.mp-close-confirm-complaint-section {
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.mp-close-confirm-complaint-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 8px 0;
+}
+
+.mp-close-confirm-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition: all 0.25s ease;
+}
+
+.mp-close-confirm-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.mp-close-confirm-textarea:focus {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.mp-close-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mp-close-confirm-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mp-close-confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mp-close-confirm-btn.close-only {
+  background: linear-gradient(135deg, #374151, #1f2937);
+  color: #e5e7eb;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.mp-close-confirm-btn.close-only:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4b5563, #374151);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.mp-close-confirm-btn.close-complain {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+  animation: closeConfirmIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mp-close-confirm-btn.close-complain:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(239, 68, 68, 0.45);
 }

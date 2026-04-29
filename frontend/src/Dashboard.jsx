@@ -1,9 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { usePushNotifications } from './usePushNotifications'
+import { notifyTicketClosed, notifyClaimantApproved, notifyPaymentReceived, notifyTicketDeleted } from './pushNotificationHelper'
 import {
   X,
+  Lock,
   Bell,
   BellRing,
   BellOff,
@@ -16,9 +19,15 @@ import {
   AlertTriangle,
   Undo2,
   MessageSquareWarning,
+  XCircle,
   Send,
   UserCircle,
   Smartphone,
+  Wallet,
+  Pencil,
+  Check,
+  CheckCheck,
+  BadgeCheck,
 } from 'lucide-react'
 import React from 'react'
 import { playPop, playClose, playClaim } from './sounds'
@@ -30,6 +39,26 @@ import './Dashboard.css'
 const CARD_VARIANTS = ['variant-cream', 'variant-blue', 'variant-yellow', 'variant-pink', 'variant-green']
 const PIN_COLORS = ['pin-red', 'pin-yellow', 'pin-green', 'pin-blue', 'pin-orange']
 function pick(arr, i) { return arr[i % arr.length] }
+
+// ── Credit score color helper ──────────────────────────────────
+function getCreditTier(score) {
+  if (score == null) return { className: 'credit-unknown', label: '?' }
+  if (score >= 80) return { className: 'credit-excellent', label: '★' }
+  if (score >= 60) return { className: 'credit-good', label: '●' }
+  if (score >= 40) return { className: 'credit-fair', label: '◆' }
+  if (score >= 20) return { className: 'credit-low', label: '▼' }
+  return { className: 'credit-poor', label: '▾' }
+}
+
+function CreditBadge({ score, size = 'sm' }) {
+  const tier = getCreditTier(score)
+  return (
+    <span className={`credit-badge ${tier.className} credit-${size}`} title={`Credit Score: ${score ?? 'N/A'}`}>
+      <span className="credit-badge-icon">{tier.label}</span>
+      <span className="credit-badge-value">{score ?? '–'}</span>
+    </span>
+  )
+}
 
 // ── Credit Score Wheel ─────────────────────────────────────────
 function CreditWheel({ score, max = 10000, min = -150 }) {
@@ -80,11 +109,25 @@ function DashTicketCard({ ticket, index, type, onClick, studentNames, user }) {
   const showStain = index % 5 === 3
 
   const hasClaimed = user && ticket.claims?.some(c => c.claimant_rollno === user.rollno)
-  const displayStatus = (hasClaimed && ticket.status !== 'closed') ? 'claimed' : ticket.status
+  const userClaim = user && ticket.claims?.find(c => c.claimant_rollno === user.rollno)
+  const userClaimStatus = userClaim?.ticket_status
+  // Check if the owner of a request ticket has paid a claimant
+  const isOwnerOfRequest = user && ticket.ownerRollno === user.rollno && ticket.type === 'request'
+  const ownerHasPaid = isOwnerOfRequest && ticket.claims?.some(c => c.ticket_status === 'paid') && ticket.status !== 'closed'
+  // Only show approved/paid status to the claimant whose claim has that status
+  const displayStatus = ownerHasPaid
+    ? "you've paid"
+    : (hasClaimed && ticket.status !== 'closed')
+      ? (userClaimStatus === 'paid' ? 'paid' : userClaimStatus === 'approved' ? 'approved' : 'claimed')
+      : ticket.status
+  const displayStatusClass = ownerHasPaid ? 'youve-paid' : displayStatus
+  // Dim for the user whose own claim is approved/paid, or for the owner who has paid
+  const shouldDim = ownerHasPaid || (hasClaimed && (userClaimStatus === 'approved' || userClaimStatus === 'paid') && ticket.status !== 'closed')
+  const approvedCount = ticket.claims?.filter(c => c.ticket_status === 'approved' || c.ticket_status === 'paid').length || 0
 
   return (
     <div
-      className={`mp-ticket ${pick(CARD_VARIANTS, index)} mp-ticket-clickable`}
+      className={`mp-ticket ${pick(CARD_VARIANTS, index)} mp-ticket-clickable${shouldDim ? ' mp-ticket-approved-dim' : ''}`}
       style={{ animationDelay: `${index * 0.06}s` }}
       id={`dash-ticket-${ticket.id}`}
       onClick={() => onClick && onClick(ticket)}
@@ -108,13 +151,32 @@ function DashTicketCard({ ticket, index, type, onClick, studentNames, user }) {
 
       <span className="mp-ticket-category">{ticket.category}</span>
 
+      {ticket.claims?.length > 0 && (
+        <div style={{ margin: '14px 0 10px 0' }}>
+          {ticket.claims.length >= 3 ? (
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#b91c1c', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              🔥 High Demand: {ticket.claims.length} claims!
+            </div>
+          ) : (
+            <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+              📦 {ticket.claims.length} claim{ticket.claims.length > 1 ? 's' : ''}
+            </div>
+          )}
+          {approvedCount > 0 && (
+            <div className="mp-ticket-approved-count">
+              ✅ {approvedCount} approved
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mp-ticket-footer">
         <span className="mp-ticket-user">
           <span className="mp-ticket-user-dot" />
           <NameTag username={ticket.user} realName={studentNames?.[ticket.ownerRollno] || 'Unknown'} />
+          <CreditBadge score={ticket.ownerCredit} size="md" />
         </span>
-        <span className={`mp-status ${displayStatus}`}>{displayStatus}</span>
+        <span className={`mp-status ${displayStatusClass}`}>{displayStatus}</span>
       </div>
     </div>
   )
@@ -161,6 +223,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const [complaintDesc, setComplaintDesc] = useState('')
   const [submittingComplaint, setSubmittingComplaint] = useState(false)
 
+  // UPI ID state
+  const [upiId, setUpiId] = useState('')
+  const [editingUpi, setEditingUpi] = useState(false)
+  const [upiDraft, setUpiDraft] = useState('')
+  const [upiSaving, setUpiSaving] = useState(false)
+  const [upiError, setUpiError] = useState('')
+
   useEffect(() => {
     const fetchNames = async () => {
       const { data } = await supabase.from('StudentNames').select('*')
@@ -173,11 +242,20 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     fetchNames()
     fetchUserTickets()
     fetchSocialCredit()
+    fetchUpiId()
     const channel = supabase.channel('dashboard_actions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'TicketTable' }, () => {
+        fetchUserTickets()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'TicketClaims' }, () => {
+        fetchUserTickets()
+      })
       .on('broadcast', { event: 'ticket_action' }, () => {
         fetchUserTickets()
       })
       .subscribe()
+
+    channelRef.current = channel
 
     return () => {
       supabase.removeChannel(channel)
@@ -206,9 +284,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
         .from('TicketTable')
         .select(`
           ticketid, type, owner_rollno, claimant_rollno,
-          owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+          owner:UserTable!TicketTable_owner_rollno_fkey ( username, social_credit ),
           claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
-          claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
+          claims:TicketClaims ( claimant_rollno, ticket_status, UserTable ( username, social_credit ) ),
           title, description, category, status, "ItemPrice"
         `)
         .eq('owner_rollno', user.rollno)
@@ -216,7 +294,18 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
       if (ownedError) throw ownedError
 
       if (ownedData) {
-        setTickets(ownedData.map(formatter).reverse())
+        const formattedOwned = ownedData.map(formatter)
+        formattedOwned.sort((a, b) => {
+          const aCredit = a.ownerCredit ?? 0
+          const bCredit = b.ownerCredit ?? 0
+          if (aCredit !== bCredit) {
+            return bCredit - aCredit
+          }
+          const aClaims = a.claims?.length ?? 0
+          const bClaims = b.claims?.length ?? 0
+          return bClaims - aClaims
+        })
+        setTickets(formattedOwned)
       }
 
       // Fetch tickets user claimed
@@ -225,9 +314,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
         .select(`
           ticket:TicketTable!inner (
             ticketid, type, owner_rollno, claimant_rollno,
-            owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+            owner:UserTable!TicketTable_owner_rollno_fkey ( username, social_credit ),
             claimant:UserTable!TicketTable_claimant_rollno_fkey ( username ),
-            claims:TicketClaims ( claimant_rollno, UserTable ( username ) ),
+            claims:TicketClaims ( claimant_rollno, ticket_status, UserTable ( username, social_credit ) ),
             title, description, category, status, "ItemPrice"
           )
         `)
@@ -237,7 +326,18 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
 
       if (claimsData) {
         const unwrappedClaims = claimsData.map(c => Array.isArray(c.ticket) ? c.ticket[0] : c.ticket).filter(Boolean)
-        setClaimedTickets(unwrappedClaims.map(formatter).reverse())
+        const formattedClaimed = unwrappedClaims.map(formatter)
+        formattedClaimed.sort((a, b) => {
+          const aCredit = a.ownerCredit ?? 0
+          const bCredit = b.ownerCredit ?? 0
+          if (aCredit !== bCredit) {
+            return bCredit - aCredit
+          }
+          const aClaims = a.claims?.length ?? 0
+          const bClaims = b.claims?.length ?? 0
+          return bClaims - aClaims
+        })
+        setClaimedTickets(formattedClaimed)
       }
     } catch (err) {
       console.error('Error fetching user tickets:', err)
@@ -249,6 +349,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
   const formatter = (t) => {
     const ownerObj = Array.isArray(t.owner) ? t.owner[0] : t.owner
     const username = ownerObj ? ownerObj.username : 'unknown'
+    const ownerCredit = ownerObj?.social_credit ?? null
+    // Sort claims by credit score descending
+    const sortedClaims = [...(t.claims || [])].sort((a, b) => {
+      const aScore = a.UserTable?.social_credit ?? 0
+      const bScore = b.UserTable?.social_credit ?? 0
+      return bScore - aScore
+    })
 
     return {
       id: String(t.type === 'request' ? 'REQ-' : 'SEL-') + t.ticketid,
@@ -259,10 +366,11 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
       price: t.ItemPrice || 0,
       user: username,
       ownerRollno: t.owner_rollno,
+      ownerCredit,
       claimantRollno: t.claimant_rollno,
       status: t.status || 'pending',
       type: t.type || 'request',
-      claims: t.claims || []
+      claims: sortedClaims
     }
   }
 
@@ -305,6 +413,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     if (deleting) return
     setDeleting(true)
     try {
+      // Capture claimant rollnos BEFORE deletion for notification
+      const claimantRollnos = (ticket.claims || []).map(c => c.claimant_rollno).filter(Boolean)
+
       const { error: ticketError } = await supabase
         .from('TicketTable')
         .delete()
@@ -313,6 +424,9 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
 
       setSelectedTicket(null)
       await fetchUserTickets()
+
+      // Push notification: notify all claimants that ticket was deleted
+      notifyTicketDeleted(ticket, user.username, claimantRollnos)
     } catch (err) {
       console.error('Error deleting ticket:', err)
       alert('Failed to delete ticket')
@@ -399,6 +513,58 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     }
   }
 
+  // ── Fetch UPI ID ────────────────────────────────────────────
+  const fetchUpiId = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('UserTable')
+        .select('upi_id')
+        .eq('rollno', user.rollno)
+        .single()
+      if (!error && data) {
+        setUpiId(data.upi_id || '')
+      }
+    } catch (err) {
+      console.error('Error fetching UPI ID:', err)
+    }
+  }
+
+  // ── Save UPI ID handler ─────────────────────────────────────
+  const handleSaveUpi = async () => {
+    const trimmed = upiDraft.trim()
+    setUpiError('')
+
+    if (trimmed && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9]+$/.test(trimmed)) {
+      setUpiError('Invalid format. Use: username@bankname')
+      return
+    }
+    if (trimmed.length > 50) {
+      setUpiError('UPI ID is too long (max 50 chars).')
+      return
+    }
+
+    setUpiSaving(true)
+    try {
+      const { error } = await supabase
+        .from('UserTable')
+        .update({ upi_id: trimmed || null })
+        .eq('rollno', user.rollno)
+
+      if (error) throw error
+
+      setUpiId(trimmed)
+      setEditingUpi(false)
+      playPop()
+      setToast('💳 UPI ID saved successfully!')
+      setTimeout(() => setToast(null), 3200)
+    } catch (err) {
+      console.error('Error saving UPI ID:', err)
+      setUpiError('Failed to save. Please try again.')
+    } finally {
+      setUpiSaving(false)
+    }
+  }
+
   // ── Unclaim ticket handler ──────────────────────────────────────
   const handleUnclaim = async (ticket) => {
     if (unclaiming) return
@@ -426,6 +592,197 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
     }
   }
 
+  // ── channelRef for broadcasting ───────────────────────────────
+  const channelRef = useRef(null)
+
+  // ── Approve claimant handler ──────────────────────────────────
+  const [approving, setApproving] = useState(null)
+
+  const handleApprove = async (ticket, claimantRollno) => {
+    if (approving) return
+    setApproving(claimantRollno)
+    try {
+      const { error } = await supabase
+        .from('TicketClaims')
+        .update({ ticket_status: 'approved' })
+        .eq('ticketid', ticket.ticketid)
+        .eq('claimant_rollno', claimantRollno)
+
+      if (error) throw error
+
+      playPop()
+      await fetchUserTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+
+      // Push notification: notify approved claimant
+      notifyClaimantApproved(ticket, claimantRollno, user.username)
+
+      // Update locally
+      setSelectedTicket(prev => prev ? {
+        ...prev,
+        claims: (prev.claims || []).map(c =>
+          c.claimant_rollno === claimantRollno ? { ...c, ticket_status: 'approved' } : c
+        )
+      } : null)
+
+      // For request tickets: owner approved a helper, show payment popup immediately
+      if (ticket.type === 'request' && ticket.ownerRollno === user.rollno) {
+        const claimObj = ticket.claims?.find(c => c.claimant_rollno === claimantRollno)
+        const claimantUsername = claimObj?.UserTable?.username || claimantRollno
+        setSelectedTicket(null)
+        openPaymentPopup(ticket, claimantRollno, claimantUsername)
+      }
+    } catch (err) {
+      console.error('Error approving claimant:', err)
+      alert('Failed to approve claimant')
+    } finally {
+      setApproving(null)
+    }
+  }
+
+  // ── Close ticket state and handlers ────────────────────────────
+  const [closing, setClosing] = useState(false)
+  const [closeConfirmData, setCloseConfirmData] = useState(null)
+  const [closeComplaintDesc, setCloseComplaintDesc] = useState('')
+
+  const handleCloseWithConfirm = async (withComplaint) => {
+    if (closing) return
+    setClosing(true)
+    try {
+      const { error } = await supabase
+        .from('TicketTable')
+        .update({ status: 'closed' })
+        .eq('ticketid', closeConfirmData.ticket.ticketid)
+      if (error) throw error
+
+      if (withComplaint && closeComplaintDesc.trim()) {
+        // For request tickets: if the helper (claimant) is closing, complaint should be about the requestor (owner)
+        const isRequestTicket = closeConfirmData.ticket.type === 'request'
+        const isCloserTheClaimant = closeConfirmData.claimantRollno === user.rollno
+        const complaintAbout = (isRequestTicket && isCloserTheClaimant)
+          ? closeConfirmData.ticket.user
+          : closeConfirmData.claimantName
+        await supabase.from('ComplaintsTable').insert({
+          rollno: user.rollno,
+          subject: `Complaint about @${complaintAbout} on ticket ${closeConfirmData.ticket.id}`,
+          description: closeComplaintDesc.trim(),
+        })
+      }
+
+      await fetchUserTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+      setSelectedTicket(prev => prev ? { ...prev, status: 'closed' } : null)
+      const claimantRollnos = (closeConfirmData.ticket.claims || []).map(c => c.claimant_rollno).filter(Boolean)
+      notifyTicketClosed(closeConfirmData.ticket, user.username, claimantRollnos)
+
+      playClose()
+      setCloseConfirmData(null)
+      setCloseComplaintDesc('')
+    } catch (err) {
+      console.error('Error closing ticket:', err)
+      alert('Failed to close ticket')
+    } finally {
+      setClosing(false)
+    }
+  }
+
+  // ── Payment popup state for approved claims ───────────────────
+  const [paymentPopupTicket, setPaymentPopupTicket] = useState(null)
+  const [paymentPopupUpi, setPaymentPopupUpi] = useState('')
+  const [paymentPopupPayee, setPaymentPopupPayee] = useState(null) // { rollno, username }
+  const [paymentPopupPayeeName, setPaymentPopupPayeeName] = useState('')
+  const [loadingUpi, setLoadingUpi] = useState(false)
+  const [payStep, setPayStep] = useState(1)
+  const [payAmount, setPayAmount] = useState('')
+  const [markingPaid, setMarkingPaid] = useState(false)
+
+  const PAID_MESSAGES = [
+    "💸 Money gone. Friendship secured. Probably.",
+    "🤝 Transaction complete! Your wallet is crying.",
+    "🎉 Paid! You're officially broke but reliable.",
+    "💰 Ka-ching! The jugaad economy thanks you.",
+    "🫡 Payment confirmed! You are a person of honor.",
+    "🪙 Coins sent into the void. Trust the process.",
+    "💳 Your UPI app just shed a tear of joy.",
+  ]
+
+  const openPaymentPopup = async (ticket, payeeRollno, payeeUsername) => {
+    setPaymentPopupTicket(ticket)
+    setPaymentPopupPayee({ rollno: payeeRollno, username: payeeUsername })
+    setPayStep(1)
+    setPayAmount(ticket.price > 0 ? String(ticket.price) : '')
+    setLoadingUpi(true)
+    setPaymentPopupPayeeName('')
+    try {
+      const { data, error } = await supabase
+        .from('UserTable')
+        .select('upi_id')
+        .eq('rollno', payeeRollno)
+        .single()
+      if (!error && data) {
+        setPaymentPopupUpi(data.upi_id || '')
+      }
+      // Fetch real name for QR pn field
+      const { data: nameData } = await supabase
+        .from('StudentNames')
+        .select('first_name')
+        .eq('rollno', payeeRollno)
+        .single()
+      if (nameData) {
+        setPaymentPopupPayeeName(nameData.first_name || payeeUsername)
+      } else {
+        setPaymentPopupPayeeName(payeeUsername)
+      }
+    } catch (err) {
+      console.error('Error fetching payee UPI:', err)
+      setPaymentPopupPayeeName(payeeUsername)
+    } finally {
+      setLoadingUpi(false)
+    }
+  }
+
+  const handleMarkPaid = async () => {
+    if (markingPaid || !paymentPopupTicket) return
+    setMarkingPaid(true)
+    try {
+      // Update TicketClaims status to 'paid' (ticket stays open — owner closes it)
+      const claimantRollno = paymentPopupTicket.ownerRollno === user.rollno
+        ? paymentPopupPayee?.rollno
+        : user.rollno
+      const { error: claimError } = await supabase
+        .from('TicketClaims')
+        .update({ ticket_status: 'paid' })
+        .eq('ticketid', paymentPopupTicket.ticketid)
+        .eq('claimant_rollno', claimantRollno)
+      if (claimError) throw claimError
+
+      playPop()
+      await fetchUserTickets()
+      channelRef.current?.send({ type: 'broadcast', event: 'ticket_action', payload: {} })
+
+      // Push notification: notify the payment receiver
+      const isOwnerPaying = paymentPopupTicket.ownerRollno === user.rollno
+      const receiverRollno = isOwnerPaying ? paymentPopupPayee?.rollno : paymentPopupTicket.ownerRollno
+      if (receiverRollno) {
+        notifyPaymentReceived(paymentPopupTicket, user.username, receiverRollno)
+      }
+
+      setPaymentPopupTicket(null)
+      setPaymentPopupPayee(null)
+      setPayStep(1)
+      setPayAmount('')
+
+      const msg = PAID_MESSAGES[Math.floor(Math.random() * PAID_MESSAGES.length)]
+      setToast(msg)
+      setTimeout(() => setToast(null), 3500)
+    } catch (err) {
+      console.error('Error marking as paid:', err)
+      alert('Failed to mark as paid')
+    } finally {
+      setMarkingPaid(false)
+    }
+  }
+
   return (
     <div className="db-overlay" id="dashboard-overlay" onClick={onClose}>
       <div className="db-panel" onClick={e => e.stopPropagation()} id="dashboard-panel">
@@ -442,6 +799,64 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
             <span className="db-rollno">{user?.rollno}</span>
           </div>
           <CreditWheel score={socialCredit} />
+        </div>
+
+        {/* ── UPI ID Section ── */}
+        <div className="db-upi-section" id="dashboard-upi-section">
+          <div className="db-upi-header">
+            <Wallet size={16} className="db-upi-icon" />
+            <span className="db-upi-label">UPI ID</span>
+          </div>
+          {editingUpi ? (
+            <div className="db-upi-edit" id="dashboard-upi-edit">
+              <div className="db-upi-edit-row">
+                <input
+                  id="dashboard-upi-input"
+                  className="db-upi-input"
+                  type="text"
+                  value={upiDraft}
+                  onChange={(e) => { setUpiDraft(e.target.value); setUpiError('') }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveUpi()}
+                  placeholder="yourname@bankname"
+                  autoFocus
+                  maxLength={50}
+                />
+                <button
+                  className="pf-edit-action-btn pf-save-btn"
+                  onClick={handleSaveUpi}
+                  disabled={upiSaving}
+                  id="dashboard-upi-save"
+                  title="Save"
+                >
+                  {upiSaving ? <div className="mp-detail-btn-spinner" /> : <Check size={16} />}
+                </button>
+                <button
+                  className="pf-edit-action-btn pf-cancel-btn"
+                  onClick={() => { setEditingUpi(false); setUpiDraft(''); setUpiError('') }}
+                  id="dashboard-upi-cancel"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="db-upi-hint">Format: username@bankname (e.g. rahul@okaxis)</div>
+              {upiError && <div className="db-upi-error">{upiError}</div>}
+            </div>
+          ) : (
+            <div className="db-upi-display">
+              <span className="db-upi-value" id="dashboard-upi-value">
+                {upiId || <span className="db-upi-empty">Not set</span>}
+              </span>
+              <button
+                className="pf-inline-edit-btn"
+                onClick={() => { setUpiDraft(upiId); setEditingUpi(true); playPop() }}
+                id="dashboard-upi-edit-btn"
+                title="Edit UPI ID"
+              >
+                <Pencil size={14} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Quick Nav Buttons ── */}
@@ -526,11 +941,33 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   type={t.type}
                   onClick={(ticket) => {
                     playClaim();
-                    if (activeTab === 'claimed' && ticket.status === 'closed' && ticket.ownerRollno !== user.rollno) {
-                      setClosedAlertTicket(ticket);
-                    } else {
-                      setSelectedTicket(ticket);
+                    // Claimed tab: check if user's claim on this ticket is approved (not paid)
+                    if (activeTab === 'claimed') {
+                      // For post/seller tickets: claimant pays owner (only if approved, not already paid)
+                      if (ticket.type === 'post') {
+                        const userClaim = ticket.claims?.find(c => c.claimant_rollno === user.rollno)
+                        if (userClaim?.ticket_status === 'approved' && ticket.status !== 'closed') {
+                          openPaymentPopup(ticket, ticket.ownerRollno, ticket.user)
+                          return
+                        }
+                      }
+                      // For request tickets: claimant whose claim is paid — show detail popup (they can close it)
+                      // Do NOT open payment popup for paid request claimants
+                      if (ticket.status === 'closed' && ticket.ownerRollno !== user.rollno) {
+                        setClosedAlertTicket(ticket)
+                        return
+                      }
                     }
+                    // Owner tab for request tickets: owner pays approved claimant (only if approved, not paid)
+                    if ((activeTab === 'requested') && ticket.ownerRollno === user.rollno && ticket.status !== 'closed') {
+                      const approvedClaim = ticket.claims?.find(c => c.ticket_status === 'approved')
+                      if (approvedClaim) {
+                        const claimantUsername = approvedClaim.UserTable?.username || approvedClaim.claimant_rollno
+                        openPaymentPopup(ticket, approvedClaim.claimant_rollno, claimantUsername)
+                        return
+                      }
+                    }
+                    setSelectedTicket(ticket);
                   }}
                   studentNames={studentNames}
                   user={user}
@@ -603,12 +1040,13 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
               <span className="mp-detail-posted-by">
                 Posted by <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag>
               </span>
+              <CreditBadge score={selectedTicket.ownerCredit} size="md" />
             </div>
 
             {selectedTicket.claims?.length > 0 && (
               <div style={{ background: '#e0f2fe', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #bae6fd', marginTop: '16px' }}>
                 <strong style={{ color: '#0284c7', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  👥 People who requested this offer ({selectedTicket.claims.length}):
+                  👥 People who claimed this ticket ({selectedTicket.claims.length}):
                 </strong>
                 {(isOwner || selectedTicket.claims.length <= 5) ? (
                   <div style={{ marginTop: '10px' }}>
@@ -617,15 +1055,71 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                         Scroll to view all claimants
                       </div>
                     )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px', paddingTop: '28px', marginTop: '-24px' }}>
                       {selectedTicket.claims.map((c, i) => {
                         const uname = c.UserTable?.username || c.user?.username || c.claimant_rollno
+                        const claimCredit = c.UserTable?.social_credit ?? null
+                        const isApproved = c.ticket_status === 'approved'
+                        const isPaid = c.ticket_status === 'paid'
+                        const isRequestTicket = selectedTicket.type === 'request'
+                        // For request tickets: claimant can close when paid
+                        const isThisClaimant = c.claimant_rollno === user.rollno
+                        const canClaimantClose = isRequestTicket && isPaid && isThisClaimant && !isClosed
                         return (
-                          <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px', fontSize: '13px', color: '#0369a1', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>
+                          <div key={i} style={{ padding: '8px 12px', background: (isApproved || isPaid) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.7)', borderRadius: '6px', fontSize: '13px', color: '#0369a1', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, border: (isApproved || isPaid) ? '1px solid rgba(16, 185, 129, 0.3)' : 'none' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <NameTag username={uname} realName={studentNames?.[c.claimant_rollno]} className="mp-detail-nametag" style={{ color: '#0369a1' }}>
                                 @{uname}
                               </NameTag>
+                              <CreditBadge score={claimCredit} size="xs" />
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {isPaid && (
+                                <span className="mp-paid-funky"><Wallet size={12} /> {isRequestTicket ? 'Requestor Paid' : 'Paid'}</span>
+                              )}
+                              {isApproved && (
+                                <span className="mp-approved-funky"><BadgeCheck size={12} /> Approved</span>
+                              )}
+                              {/* Owner actions for post tickets: approve or close */}
+                              {isOwner && !isClosed && !isRequestTicket && (
+                                (isApproved || isPaid) ? (
+                                  <button
+                                    className="mp-close-for-claimant-btn"
+                                    onClick={(e) => { e.stopPropagation(); setCloseConfirmData({ ticket: selectedTicket, claimantRollno: c.claimant_rollno, claimantName: uname }); setCloseComplaintDesc('') }}
+                                  >
+                                    <XCircle size={12} /> Close
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="mp-approve-btn"
+                                    onClick={(e) => { e.stopPropagation(); handleApprove(selectedTicket, c.claimant_rollno) }}
+                                    disabled={approving === c.claimant_rollno}
+                                    title="Approve this claimant"
+                                  >
+                                    {approving === c.claimant_rollno ? <div className="mp-detail-btn-spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} /> : <CheckCheck size={13} />}
+                                  </button>
+                                )
+                              )}
+                              {/* Owner actions for request tickets: approve only (pre-approved) */}
+                              {isOwner && !isClosed && isRequestTicket && !isApproved && !isPaid && (
+                                <button
+                                  className="mp-approve-btn"
+                                  onClick={(e) => { e.stopPropagation(); handleApprove(selectedTicket, c.claimant_rollno) }}
+                                  disabled={approving === c.claimant_rollno}
+                                  title="Approve this claimant"
+                                >
+                                  {approving === c.claimant_rollno ? <div className="mp-detail-btn-spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} /> : <CheckCheck size={13} />}
+                                </button>
+                              )}
+                              {/* Claimant close button on request tickets when paid */}
+                              {canClaimantClose && (
+                                <button
+                                  className="mp-close-for-claimant-btn"
+                                  onClick={(e) => { e.stopPropagation(); setCloseConfirmData({ ticket: selectedTicket, claimantRollno: c.claimant_rollno, claimantName: uname }); setCloseComplaintDesc('') }}
+                                >
+                                  <XCircle size={12} /> Close
+                                </button>
+                              )}
                             </span>
                           </div>
                         )
@@ -640,28 +1134,103 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
               </div>
             )}
 
-            {/* ── Claimed state ── */}
-            {hasClaimed && !isClosed && (
-              <div className="mp-detail-claimed-banner">
-                <CheckCircle2 size={20} className="mp-detail-claimed-icon" />
-                <div className="mp-detail-claimed-text">
-                  <strong>You have claimed this ticket!</strong>
+            {/* ── Claimed / Approved state ── */}
+            {hasClaimed && !isClosed && (() => {
+              const userClaim = selectedTicket.claims?.find(c => c.claimant_rollno === user.rollno)
+              const isPaidClaim = userClaim?.ticket_status === 'paid'
+              const isApprovedClaim = userClaim?.ticket_status === 'approved'
+              const isRequestTicket = selectedTicket.type === 'request'
+              if (isPaidClaim) {
+                // Request tickets: the OWNER paid the claimant
+                if (isRequestTicket) return (
+                  <div className="mp-detail-paid-banner">
+                    <Wallet size={20} className="mp-detail-paid-icon" />
+                    <div className="mp-detail-paid-text">
+                      <strong>💰 The requestor has paid you!</strong>
+                      <span><NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> has completed the payment. You can now close this ticket.</span>
+                    </div>
+                  </div>
+                )
+                // Post tickets: the CLAIMANT paid the owner
+                return (
+                  <div className="mp-detail-paid-banner">
+                    <Wallet size={20} className="mp-detail-paid-icon" />
+                    <div className="mp-detail-paid-text">
+                      <strong>💰 You've marked this as paid!</strong>
+                      <span>Waiting for <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to close the ticket.</span>
+                    </div>
+                  </div>
+                )
+              }
+              if (isApprovedClaim) return (
+                <div className="mp-detail-approved-banner">
+                  <BadgeCheck size={20} className="mp-detail-approved-icon" />
+                  <div className="mp-detail-approved-text">
+                    <strong>🎉 Your claim has been approved!</strong>
+                    <span>Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to finalize.</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+              return (
+                <>
+                  <div className="mp-detail-claimed-banner">
+                    <CheckCircle2 size={20} className="mp-detail-claimed-icon" />
+                    <div className="mp-detail-claimed-text">
+                      <strong>You have claimed this ticket!</strong>
+                    </div>
+                  </div>
+                  <div className="mp-detail-owner-note success">
+                    <CheckCircle2 size={16} />
+                    <span>
+                      Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to finalize.
+                    </span>
+                  </div>
+                </>
+              )
+            })()}
+
+            {/* ── Owner paid banner (request tickets) ── */}
+            {isOwner && !isClosed && (() => {
+              const isRequestTicket = selectedTicket.type === 'request'
+              const paidClaim = selectedTicket.claims?.find(c => c.ticket_status === 'paid')
+              if (isRequestTicket && paidClaim) {
+                const helperName = paidClaim.UserTable?.username || paidClaim.claimant_rollno
+                return (
+                  <div className="mp-detail-paid-banner">
+                    <Wallet size={20} className="mp-detail-paid-icon" />
+                    <div className="mp-detail-paid-text">
+                      <strong>💰 You've paid the helper!</strong>
+                      <span>Payment to <NameTag username={helperName} realName={studentNames?.[paidClaim.claimant_rollno]} className="mp-detail-nametag"><strong>@{helperName}</strong></NameTag> confirmed. Waiting for them to close the ticket.</span>
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             {/* ── Closed state banner ── */}
-            {isClosed && (
-              <div className="mp-detail-closed-banner" id="closed-banner">
-                <Lock size={20} className="mp-detail-closed-icon" />
-                <div className="mp-detail-closed-text">
-                  <strong>This ticket is closed.</strong>
-                  <span className="mp-detail-closed-sub">
-                    {isOwner ? 'You marked this deal as done. 🎉' : 'The owner has closed this ticket.'}
-                  </span>
+            {isClosed && (() => {
+              const isRequestTicket = selectedTicket.type === 'request'
+              let closedMsg = 'The owner has closed this ticket.'
+              if (isOwner) {
+                closedMsg = isRequestTicket
+                  ? 'The helper confirmed receipt and closed this ticket. 🎉'
+                  : 'You marked this deal as done. 🎉'
+              } else if (hasClaimed) {
+                closedMsg = isRequestTicket
+                  ? 'You confirmed receipt and closed this ticket. 🎉'
+                  : 'The owner has closed this ticket.'
+              }
+              return (
+                <div className="mp-detail-closed-banner" id="closed-banner">
+                  <Lock size={20} className="mp-detail-closed-icon" />
+                  <div className="mp-detail-closed-text">
+                    <strong>This ticket is closed.</strong>
+                    <span className="mp-detail-closed-sub">{closedMsg}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             <div className="mp-detail-actions">
               {isOwner && !selectedTicket.claims?.length && !isClosed && (
@@ -670,36 +1239,33 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                   <span>This is your ticket — waiting for someone to claim it.</span>
                 </div>
               )}
-              {hasClaimed && !isOwner && !isClosed && (
-                <div className="mp-detail-owner-note success">
-                  <CheckCircle2 size={16} />
-                  <span>
-                    Reach out to <NameTag username={selectedTicket.user} realName={studentNames?.[selectedTicket.ownerRollno]} className="mp-detail-nametag"><strong>@{selectedTicket.user}</strong></NameTag> to finalize.
-                  </span>
-                </div>
-              )}
 
-              {/* Unclaim button — only for the claimant */}
-              {hasClaimed && !isOwner && !isClosed && (
-                <button
-                  className="db-unclaim-btn"
-                  onClick={() => handleUnclaim(selectedTicket)}
-                  disabled={unclaiming}
-                  id="dash-unclaim-ticket-btn"
-                >
-                  {unclaiming ? (
-                    <>
-                      <div className="mp-detail-btn-spinner" />
-                      Releasing…
-                    </>
-                  ) : (
-                    <>
-                      <Undo2 size={18} />
-                      Unclaim Ticket
-                    </>
-                  )}
-                </button>
-              )}
+              {/* Unclaim button — only for the claimant, hide when paid */}
+              {hasClaimed && !isOwner && !isClosed && (() => {
+                const userClaim = selectedTicket.claims?.find(c => c.claimant_rollno === user.rollno)
+                const isPaidClaim = userClaim?.ticket_status === 'paid'
+                if (isPaidClaim) return null
+                return (
+                  <button
+                    className="db-unclaim-btn"
+                    onClick={() => handleUnclaim(selectedTicket)}
+                    disabled={unclaiming}
+                    id="dash-unclaim-ticket-btn"
+                  >
+                    {unclaiming ? (
+                      <>
+                        <div className="mp-detail-btn-spinner" />
+                        Releasing…
+                      </>
+                    ) : (
+                      <>
+                        <Undo2 size={18} />
+                        Unclaim Ticket
+                      </>
+                    )}
+                  </button>
+                )
+              })()}
 
               {isOwner && (
                 <button
@@ -720,6 +1286,203 @@ export default function Dashboard({ user, onClose, onNavigateMarketplace }) {
                       Delete Ticket Forever
                     </>
                   )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Payment Popup for Approved Claims (QR Code Flow) ── */}
+      {paymentPopupTicket && (
+        <div
+          className="mp-modal-overlay"
+          onClick={() => { setPaymentPopupTicket(null); setPaymentPopupPayee(null); setPayStep(1); setPayAmount('') }}
+          id="payment-popup-overlay"
+          style={{ zIndex: 500 }}
+        >
+          <div
+            className="db-payment-popup"
+            onClick={(e) => e.stopPropagation()}
+            id="payment-popup-card"
+          >
+            <button
+              className="db-close-btn db-payment-close"
+              onClick={() => { setPaymentPopupTicket(null); setPaymentPopupPayee(null); setPayStep(1); setPayAmount('') }}
+              id="payment-popup-close"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="db-payment-icon">
+              <BadgeCheck size={32} />
+            </div>
+
+            <h3 className="db-payment-title">
+              {paymentPopupTicket.type === 'request' && paymentPopupTicket.ownerRollno === user.rollno
+                ? 'Helper Approved! 🎉'
+                : 'Claim Approved! 🎉'}
+            </h3>
+            <p className="db-payment-subtitle">
+              {paymentPopupTicket.type === 'request' && paymentPopupTicket.ownerRollno === user.rollno ? (
+                <>You approved <NameTag username={paymentPopupPayee?.username} realName={studentNames?.[paymentPopupPayee?.rollno]}><strong>@{paymentPopupPayee?.username}</strong></NameTag> to help with <strong>"{paymentPopupTicket.title}"</strong>. Pay them to finalize.</>
+              ) : (
+                <>Your claim on <strong>"{paymentPopupTicket.title}"</strong> has been approved by{' '}
+                <NameTag username={paymentPopupTicket.user} realName={studentNames?.[paymentPopupTicket.ownerRollno]}>
+                  <strong>@{paymentPopupTicket.user}</strong>
+                </NameTag>.</>
+              )}
+            </p>
+
+            {/* ── Step indicator ── */}
+            <div className="db-pay-steps">
+              <div className={`db-pay-step-dot ${payStep >= 1 ? 'active' : ''}`}>1</div>
+              <div className="db-pay-step-line" />
+              <div className={`db-pay-step-dot ${payStep >= 2 ? 'active' : ''}`}>2</div>
+            </div>
+
+            {loadingUpi ? (
+              <div className="db-payment-loading-state">
+                <div className="mp-detail-btn-spinner" style={{ width: 24, height: 24, borderWidth: 2.5 }} />
+                <span>Loading payment info…</span>
+              </div>
+            ) : payStep === 1 ? (
+              /* ── STEP 1: Enter Amount ── */
+              <div className="db-pay-step-content">
+                <label className="db-pay-amount-label" htmlFor="pay-amount-input">Negotiated Amount (₹)</label>
+                <input
+                  id="pay-amount-input"
+                  className="db-pay-amount-input"
+                  type="number"
+                  min="1"
+                  placeholder="Enter amount…"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && payAmount && Number(payAmount) > 0 && paymentPopupUpi && setPayStep(2)}
+                  autoFocus
+                />
+                {!paymentPopupUpi && (
+                  <div className="db-pay-no-upi-warning">
+                    ⚠️ {paymentPopupTicket.type === 'request' && paymentPopupTicket.ownerRollno === user.rollno
+                      ? "Helper hasn't added their UPI ID yet"
+                      : "Seller hasn't added their UPI ID yet"}
+                  </div>
+                )}
+                <button
+                  className={`db-pay-confirm-btn ${!paymentPopupUpi ? 'disabled' : ''}`}
+                  onClick={() => setPayStep(2)}
+                  disabled={!payAmount || Number(payAmount) <= 0 || !paymentPopupUpi}
+                  title={!paymentPopupUpi ? "Seller hasn't added their UPI ID yet" : ''}
+                  id="pay-confirm-amount-btn"
+                >
+                  <Wallet size={16} />
+                  {!paymentPopupUpi ? "Can't Pay — No UPI ID" : 'Pay Now'}
+                </button>
+              </div>
+            ) : (
+              /* ── STEP 2: QR Code ── */
+              <div className="db-pay-step-content">
+                <div className="db-pay-qr-amount-display">
+                  <span className="db-pay-qr-amount-label">Amount</span>
+                  <span className="db-pay-qr-amount-value">₹{payAmount}</span>
+                </div>
+
+                <div className="db-pay-qr-container">
+                  <QRCodeSVG
+                    value={`upi://pay?pa=${encodeURIComponent(paymentPopupUpi)}&pn=${encodeURIComponent(paymentPopupPayeeName)}&am=${encodeURIComponent(payAmount)}&cu=INR&tn=${encodeURIComponent('Jugaad:' + paymentPopupTicket.title)}`}
+                    size={180}
+                    bgColor="#2c1810"
+                    fgColor="#f5e6d3"
+                    level="M"
+                    includeMargin={true}
+                  />
+                </div>
+
+                <div className="db-pay-qr-hint">Scan with any UPI app to pay</div>
+
+                <div className="db-pay-qr-upi-row">
+                  <Wallet size={14} />
+                  <span>{paymentPopupUpi}</span>
+                </div>
+
+                <div className="db-pay-action-row">
+                  <button
+                    className="db-pay-back-btn"
+                    onClick={() => setPayStep(1)}
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    className="db-pay-paid-btn"
+                    onClick={handleMarkPaid}
+                    disabled={markingPaid}
+                    id="mark-paid-btn"
+                  >
+                    {markingPaid ? (
+                      <><div className="mp-detail-btn-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Confirming…</>
+                    ) : (
+                      <><CheckCheck size={16} /> I've Paid</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Close Confirmation Popup (High Contrast) ── */}
+      {closeConfirmData && (
+        <div
+          className="mp-modal-overlay"
+          onClick={() => { setCloseConfirmData(null); setCloseComplaintDesc('') }}
+          id="dash-close-confirm-overlay"
+          style={{ zIndex: 500 }}
+        >
+          <div
+            className="mp-close-confirm-card"
+            onClick={(e) => e.stopPropagation()}
+            id="dash-close-confirm-card"
+          >
+            <button
+              className="mp-close-confirm-x"
+              onClick={() => { setCloseConfirmData(null); setCloseComplaintDesc('') }}
+            >
+              <X size={14} />
+            </button>
+
+            <div className="mp-close-confirm-emoji">🔒</div>
+            <h3 className="mp-close-confirm-title">Close Ticket?</h3>
+            <p className="mp-close-confirm-desc">
+              Closing <strong>{closeConfirmData.ticket.id}</strong> for <strong>@{closeConfirmData.claimantName}</strong>.
+            </p>
+
+            <div className="mp-close-confirm-complaint-section">
+              <p className="mp-close-confirm-complaint-label">⚠️ Raise a complaint about @{(closeConfirmData.ticket.type === 'request' && closeConfirmData.claimantRollno === user.rollno) ? closeConfirmData.ticket.user : closeConfirmData.claimantName}?</p>
+              <textarea
+                className="mp-close-confirm-textarea"
+                placeholder="Describe any issue (optional)…"
+                value={closeComplaintDesc}
+                onChange={(e) => setCloseComplaintDesc(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="mp-close-confirm-actions">
+              <button
+                className="mp-close-confirm-btn close-only"
+                onClick={() => handleCloseWithConfirm(false)}
+                disabled={closing}
+              >
+                {closing ? <><div className="mp-detail-btn-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Closing…</> : <><Lock size={14} /> Just Close</>}
+              </button>
+              {closeComplaintDesc.trim() && (
+                <button
+                  className="mp-close-confirm-btn close-complain"
+                  onClick={() => handleCloseWithConfirm(true)}
+                  disabled={closing}
+                >
+                  {closing ? <><div className="mp-detail-btn-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Filing…</> : <><AlertTriangle size={14} /> Close & Complain</>}
                 </button>
               )}
             </div>

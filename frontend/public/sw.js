@@ -1,3 +1,16 @@
+// ── Jugaad Junction Service Worker ──────────────────────────────
+
+// Activate immediately — don't wait for old tabs to close
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+});
+
+// Claim all clients immediately on activation
+self.addEventListener('activate', function(event) {
+  event.waitUntil(clients.claim());
+});
+
+// ── Push notification handler ──────────────────────────────────
 self.addEventListener('push', function(event) {
   if (event.data) {
     let data;
@@ -9,8 +22,8 @@ self.addEventListener('push', function(event) {
     
     const options = {
       body: data.body,
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
+      icon: '/jj-icon.svg',
+      badge: '/jj-icon.svg',
       vibrate: [100, 50, 100],
       tag: data.tag || 'jugaad-notification',
       renotify: true,
@@ -27,6 +40,7 @@ self.addEventListener('push', function(event) {
   }
 });
 
+// ── Notification click handler ─────────────────────────────────
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 

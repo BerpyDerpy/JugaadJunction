@@ -33,7 +33,7 @@ Jugaad Junction is a hyper-local, peer-to-peer resource exchange platform design
 ## Database Schema (Supabase)
 Real-time capabilities are actively utilized via `supabase_realtime` publications for `TicketTable`, `TicketClaims`, and `ComplaintsTable`.
 
-- **`UserTable`**: `rollno` (PK), `password`, `username`, `social_credit` (0-100).
+- **`UserTable`**: `rollno` (PK), `password`, `username`, `social_credit` (0-100), `upi_id` (nullable, VARCHAR(50)).
 - **`StudentNames`**: `rollno` (PK), `first_name` (standalone table for real names).
 - **`TicketTable`**: 
   - `ticketid` (PK)

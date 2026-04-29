@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS public."UserTable" (
   rollno VARCHAR(25) PRIMARY KEY,
   password VARCHAR(255) NOT NULL,
   username VARCHAR(255) NOT NULL,
-  social_credit INT CHECK (social_credit >= 0 AND social_credit <= 100)
+  social_credit INT CHECK (social_credit >= 0 AND social_credit <= 100),
+  upi_id VARCHAR(50) DEFAULT NULL
 );
 
 -- NEW: StudentNames Schema (Standalone table for real first names)
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public."TicketTable" (
 );
 
 -- Schema Migrations for existing tables
+ALTER TABLE public."UserTable" ADD COLUMN IF NOT EXISTS upi_id VARCHAR(50) DEFAULT NULL;
 ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS type VARCHAR(10) CHECK (type IN ('request', 'post')) NOT NULL DEFAULT 'request';
 ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT 'Untitled';
 ALTER TABLE public."TicketTable" ADD COLUMN IF NOT EXISTS description TEXT;
@@ -164,3 +166,12 @@ ALTER TABLE public."ComplaintsTable" DROP CONSTRAINT IF EXISTS "ComplaintsTable_
 ALTER TABLE public."ComplaintsTable" ADD CONSTRAINT "ComplaintsTable_rollno_fkey" FOREIGN KEY (rollno) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE public."TicketClaims";
+
+-- Migration: Add ticket_status to TicketClaims for approval workflow
+ALTER TABLE public."TicketClaims"
+  ADD COLUMN IF NOT EXISTS ticket_status VARCHAR(20)
+  DEFAULT 'claimed'
+  CHECK (ticket_status IN ('pending', 'claimed', 'approved', 'closed'));
+
+ALTER TABLE public."TicketClaims" DROP CONSTRAINT IF EXISTS "TicketClaims_ticket_status_check";
+ALTER TABLE public."TicketClaims" ADD CONSTRAINT "TicketClaims_ticket_status_check" CHECK (ticket_status IN ('pending', 'claimed', 'approved', 'paid', 'closed'));

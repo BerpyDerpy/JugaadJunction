@@ -33,6 +33,32 @@ const CLOSE_MESSAGES = [
   (owner, title) => `🏁 And that's a wrap! @${owner} closed "${title}". Jugaad delivered.`,
 ];
 
+const APPROVED_MESSAGES = [
+  (owner, title) => `🎉 @${owner} approved your claim on "${title}"! You're in — go make it happen!`,
+  (owner, title) => `✅ Congrats! @${owner} picked YOU for "${title}". Don't let them down!`,
+  (owner, title) => `🏆 You've been chosen! @${owner} approved your claim on "${title}".`,
+  (owner, title) => `⚡ Green light! @${owner} approved you for "${title}". Time to deliver some jugaad!`,
+  (owner, title) => `🤝 @${owner} said YES to your claim on "${title}". The deal is ON!`,
+  (owner, title) => `🎯 Bullseye! You got approved for "${title}" by @${owner}. Now go earn that credit!`,
+];
+
+const PAYMENT_MESSAGES = [
+  (payer, title) => `💸 Ka-ching! @${payer} just paid you for "${title}". Check your UPI!`,
+  (payer, title) => `🤑 Money alert! @${payer} sent payment for "${title}". The jugaad economy thrives!`,
+  (payer, title) => `💰 @${payer} marked "${title}" as paid. Your wallet just got a little heavier!`,
+  (payer, title) => `🪙 Cha-ching! @${payer} completed payment on "${title}". Go treat yourself!`,
+  (payer, title) => `💳 Payment received from @${payer} for "${title}". Capitalism strikes again!`,
+  (payer, title) => `🎊 @${payer} paid up for "${title}". Your trust in humanity: restored.`,
+];
+
+const DELETE_MESSAGES = [
+  (owner, title) => `🗑️ @${owner} deleted "${title}". Poof — like it never existed.`,
+  (owner, title) => `💨 "${title}" just vanished! @${owner} pressed the big red button.`,
+  (owner, title) => `🫠 RIP "${title}". @${owner} sent it to the shadow realm.`,
+  (owner, title) => `🧹 @${owner} swept "${title}" off the board. Time to find a new quest!`,
+  (owner, title) => `📭 "${title}" by @${owner} has been deleted. Your claim has been released.`,
+];
+
 // ─── Helpers ─────────────────────────────────────────────────────
 function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -133,6 +159,50 @@ export function notifyTicketClosed(ticket, ownerUsername, claimantRollnos) {
 
   const title = '🔒 Ticket Closed!';
   const body = pickRandom(CLOSE_MESSAGES)(ownerUsername, truncate(ticket.title));
+
+  sendPush({
+    target_rollnos: claimantRollnos,
+    title,
+    body,
+  });
+}
+
+/**
+ * Notify the CLAIMANT that the ticket owner approved their claim.
+ */
+export function notifyClaimantApproved(ticket, claimantRollno, ownerUsername) {
+  const title = '✅ Your Claim Was Approved!';
+  const body = pickRandom(APPROVED_MESSAGES)(ownerUsername, truncate(ticket.title));
+
+  sendPush({
+    target_rollnos: [claimantRollno],
+    title,
+    body,
+  });
+}
+
+/**
+ * Notify the RECEIVER that a payment was made for a ticket.
+ */
+export function notifyPaymentReceived(ticket, payerUsername, receiverRollno) {
+  const title = '💸 Payment Received!';
+  const body = pickRandom(PAYMENT_MESSAGES)(payerUsername, truncate(ticket.title));
+
+  sendPush({
+    target_rollnos: [receiverRollno],
+    title,
+    body,
+  });
+}
+
+/**
+ * Notify all CLAIMANTS that the ticket owner deleted the ticket.
+ */
+export function notifyTicketDeleted(ticket, ownerUsername, claimantRollnos) {
+  if (!claimantRollnos || claimantRollnos.length === 0) return;
+
+  const title = '🗑️ Ticket Deleted!';
+  const body = pickRandom(DELETE_MESSAGES)(ownerUsername, truncate(ticket.title));
 
   sendPush({
     target_rollnos: claimantRollnos,

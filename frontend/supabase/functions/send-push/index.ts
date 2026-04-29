@@ -74,12 +74,21 @@ serve(async (req) => {
           console.log(`Push sent to ${sub.roll_number}`);
         } catch (err) {
           console.error(`Failed to send push to ${sub.roll_number}:`, err);
-          // Clean up expired subscriptions
+          // Clean up expired subscriptions (only remove the specific device endpoint)
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await supabase
-              .from("push_subscriptions")
-              .delete()
-              .eq("roll_number", sub.roll_number);
+            const endpoint = sub.subscription?.endpoint;
+            if (endpoint) {
+              await supabase
+                .from("push_subscriptions")
+                .delete()
+                .eq("roll_number", sub.roll_number)
+                .eq("endpoint", endpoint);
+            } else {
+              await supabase
+                .from("push_subscriptions")
+                .delete()
+                .eq("roll_number", sub.roll_number);
+            }
             console.log(`Cleaned up expired subscription for ${sub.roll_number}`);
           }
         }

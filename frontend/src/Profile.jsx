@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   Settings,
+  Wallet,
 } from 'lucide-react'
 import { playPop, playSuccess, playError } from './sounds'
 import NameTag from './NameTag'
@@ -81,10 +82,18 @@ const BADGE_DEFS = [
 function ProfileTicketCard({ ticket, index, studentNames }) {
   const showTape = index % 4 === 1
   const showStain = index % 5 === 3
+  const hasAnyApproved = ticket.claims?.some(c => c.ticket_status === 'approved')
+  const hasAnyPaid = ticket.claims?.some(c => c.ticket_status === 'paid')
+  const displayStatus = hasAnyPaid && ticket.status !== 'closed'
+    ? 'paid'
+    : hasAnyApproved && ticket.status !== 'closed'
+      ? 'approved'
+      : ticket.status
+  const approvedCount = ticket.claims?.filter(c => c.ticket_status === 'approved' || c.ticket_status === 'paid').length || 0
 
   return (
     <div
-      className={`mp-ticket ${pick(CARD_VARIANTS, index)}`}
+      className={`mp-ticket ${pick(CARD_VARIANTS, index)}${(hasAnyApproved || hasAnyPaid) && ticket.status !== 'closed' ? ' mp-ticket-approved-dim' : ''}`}
       style={{ animationDelay: `${index * 0.06}s` }}
       id={`profile-ticket-${ticket.id}`}
     >
@@ -106,12 +115,25 @@ function ProfileTicketCard({ ticket, index, studentNames }) {
       <div className="mp-ticket-desc">{ticket.desc}</div>
       <span className="mp-ticket-category">{ticket.category}</span>
 
+      {ticket.claims?.length > 0 && (
+        <div style={{ margin: '14px 0 10px 0' }}>
+          <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            📦 {ticket.claims.length} claim{ticket.claims.length > 1 ? 's' : ''}
+          </div>
+          {approvedCount > 0 && (
+            <div className="mp-ticket-approved-count">
+              ✅ {approvedCount} approved
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mp-ticket-footer">
         <span className="mp-ticket-user">
           <span className="mp-ticket-user-dot" />
           <NameTag username={ticket.user} realName={studentNames?.[ticket.ownerRollno] || 'Unknown'} />
         </span>
-        <span className={`mp-status ${ticket.status}`}>{ticket.status}</span>
+        <span className={`mp-status ${displayStatus}`}>{displayStatus}</span>
       </div>
     </div>
   )
@@ -152,6 +174,13 @@ export default function Profile({ user, setUser, onLogout }) {
 
   const [toast, setToast] = useState(null)
 
+  // UPI ID state
+  const [upiId, setUpiId] = useState('')
+  const [editingUpi, setEditingUpi] = useState(false)
+  const [upiDraft, setUpiDraft] = useState('')
+  const [upiSaving, setUpiSaving] = useState(false)
+  const [upiError, setUpiError] = useState('')
+
   // fetch everything on mount
   useEffect(() => {
     const load = async () => {
@@ -162,7 +191,7 @@ export default function Profile({ user, setUser, onLogout }) {
         // 1. fetch user info
         const { data: userData, error: userError } = await supabase
           .from('UserTable')
-          .select('username, social_credit, rollno')
+          .select('username, social_credit, rollno, upi_id')
           .eq('rollno', rollno)
           .single()
 
@@ -174,6 +203,7 @@ export default function Profile({ user, setUser, onLogout }) {
 
         setProfileUser(userData)
         setSocialCredit(userData.social_credit)
+        setUpiId(userData.upi_id || '')
 
         // 2. fetch real name
         const { data: nameData } = await supabase
@@ -198,6 +228,7 @@ export default function Profile({ user, setUser, onLogout }) {
           .select(`
             ticketid, type, owner_rollno, claimant_rollno,
             owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+            claims:TicketClaims ( claimant_rollno, ticket_status ),
             title, description, category, status, "ItemPrice"
           `)
           .eq('owner_rollno', rollno)
@@ -210,9 +241,11 @@ export default function Profile({ user, setUser, onLogout }) {
         const { data: claimsData } = await supabase
           .from('TicketClaims')
           .select(`
+            ticket_status,
             ticket:TicketTable!inner (
               ticketid, type, owner_rollno, claimant_rollno,
               owner:UserTable!TicketTable_owner_rollno_fkey ( username ),
+              claims:TicketClaims ( claimant_rollno, ticket_status ),
               title, description, category, status, "ItemPrice"
             )
           `)
@@ -250,6 +283,7 @@ export default function Profile({ user, setUser, onLogout }) {
       claimantRollno: t.claimant_rollno,
       status: t.status || 'pending',
       type: t.type || 'request',
+      claims: t.claims || [],
     }
   }
 
@@ -421,6 +455,43 @@ export default function Profile({ user, setUser, onLogout }) {
     setShowConfirmPw(false)
   }
 
+  // ── UPI ID save handler ─────────────────────────────────────
+  const handleSaveUpi = async () => {
+    const trimmed = upiDraft.trim()
+    setUpiError('')
+
+    if (trimmed && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9]+$/.test(trimmed)) {
+      setUpiError('Invalid format. Use: username@bankname')
+      return
+    }
+    if (trimmed.length > 50) {
+      setUpiError('UPI ID is too long (max 50 chars).')
+      return
+    }
+
+    setUpiSaving(true)
+    try {
+      const { error } = await supabase
+        .from('UserTable')
+        .update({ upi_id: trimmed || null })
+        .eq('rollno', rollno)
+
+      if (error) throw error
+
+      setUpiId(trimmed)
+      setEditingUpi(false)
+      playSuccess()
+      setToast('💳 UPI ID saved successfully!')
+      setTimeout(() => setToast(null), 3200)
+    } catch (err) {
+      console.error('Error saving UPI ID:', err)
+      playError()
+      setUpiError('Failed to save. Please try again.')
+    } finally {
+      setUpiSaving(false)
+    }
+  }
+
   // ── Loading state ────────────────────────────────────────────
   if (loading) {
     return (
@@ -557,6 +628,66 @@ export default function Profile({ user, setUser, onLogout }) {
             )}
           </div>
           <CreditWheel score={socialCredit} />
+        </div>
+
+        {/* ── UPI ID Section ── */}
+        <div className="db-upi-section" id="profile-upi-section" style={{ marginBottom: 24 }}>
+          <div className="db-upi-header">
+            <Wallet size={16} className="db-upi-icon" />
+            <span className="db-upi-label">UPI ID</span>
+          </div>
+          {isOwnProfile && editingUpi ? (
+            <div className="db-upi-edit" id="profile-upi-edit">
+              <div className="db-upi-edit-row">
+                <input
+                  id="profile-upi-input"
+                  className="db-upi-input"
+                  type="text"
+                  value={upiDraft}
+                  onChange={(e) => { setUpiDraft(e.target.value); setUpiError('') }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveUpi()}
+                  placeholder="yourname@bankname"
+                  autoFocus
+                  maxLength={50}
+                />
+                <button
+                  className="pf-edit-action-btn pf-save-btn"
+                  onClick={handleSaveUpi}
+                  disabled={upiSaving}
+                  id="profile-upi-save"
+                  title="Save"
+                >
+                  {upiSaving ? <div className="mp-detail-btn-spinner" /> : <Check size={16} />}
+                </button>
+                <button
+                  className="pf-edit-action-btn pf-cancel-btn"
+                  onClick={() => { setEditingUpi(false); setUpiDraft(''); setUpiError('') }}
+                  id="profile-upi-cancel"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="db-upi-hint">Format: username@bankname (e.g. rahul@okaxis)</div>
+              {upiError && <div className="db-upi-error">{upiError}</div>}
+            </div>
+          ) : (
+            <div className="db-upi-display">
+              <span className="db-upi-value" id="profile-upi-value">
+                {upiId || <span className="db-upi-empty">Not set</span>}
+              </span>
+              {isOwnProfile && (
+                <button
+                  className="pf-inline-edit-btn"
+                  onClick={() => { setUpiDraft(upiId); setEditingUpi(true); playPop() }}
+                  id="profile-upi-edit-btn"
+                  title="Edit UPI ID"
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Edit Profile Section (own profile only) ── */}

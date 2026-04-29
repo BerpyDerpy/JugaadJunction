@@ -1,15 +1,23 @@
--- Push Subscriptions Schema
+-- Push Subscriptions Schema (Multi-device support)
+-- Each user can have multiple push subscriptions (one per device/browser)
+
+-- Drop old single-device table if migrating
+DROP TABLE IF EXISTS public.push_subscriptions CASCADE;
+
 CREATE TABLE IF NOT EXISTS public.push_subscriptions (
-  roll_number VARCHAR(25) PRIMARY KEY REFERENCES public."UserTable"(rollno),
+  id SERIAL PRIMARY KEY,
+  roll_number VARCHAR(25) REFERENCES public."UserTable"(rollno) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL,
   subscription JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(roll_number, endpoint)
 );
 
 -- Enable RLS
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Allow anon to see/insert/update. Since this is an anon client, we allow it to manage subscriptions based on roll_number.
+-- Allow anon to see/insert/update/delete. Since this is an anon client, we allow it to manage subscriptions based on roll_number.
 -- In a fully authenticated app, we would match auth.uid().
 CREATE POLICY "Allow anon to select push subscriptions"
 ON public.push_subscriptions FOR SELECT
@@ -21,6 +29,10 @@ WITH CHECK (true);
 
 CREATE POLICY "Allow anon to update push subscriptions"
 ON public.push_subscriptions FOR UPDATE
+USING (true);
+
+CREATE POLICY "Allow anon to delete push subscriptions"
+ON public.push_subscriptions FOR DELETE
 USING (true);
 
 -- Adding a trigger to update 'updated_at' automatically
