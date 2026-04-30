@@ -13,7 +13,7 @@ console.log("VAPID_PRIVATE_KEY from env:", VAPID_PRIVATE_KEY ? "(set, " + VAPID_
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
-    "mailto:admin@jugaadjunction.local",
+    "mailto:nandu211020@gmail.com",
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
   );
