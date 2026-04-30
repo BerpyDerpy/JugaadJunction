@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push";
 
 // Configuration for Web Push
-const VAPID_PUBLIC_KEY = Deno.env.get("VITE_VAPID_PUBLIC_KEY");
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -33,7 +33,7 @@ serve(async (req) => {
       // Depending on how it's set up in Supabase, the DB hook might already do this check,
       // but it's good to double check it here.
       if (new_credit < 50 && old_credit >= 50) {
-        
+
         // Fetch ALL subscriptions because the user requested notifications to go to all users
         const { data: subscriptions, error } = await supabase
           .from("push_subscriptions")

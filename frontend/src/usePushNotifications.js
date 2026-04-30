@@ -142,7 +142,7 @@ export function usePushNotifications(rollno) {
       }
 
       // 3. Get VAPID key
-      const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      const publicVapidKey = import.meta.env.VAPID_PUBLIC_KEY;
       if (!publicVapidKey) {
         throw new Error('VITE_VAPID_PUBLIC_KEY is not set in environment.');
       }
