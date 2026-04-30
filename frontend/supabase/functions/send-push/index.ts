@@ -8,6 +8,9 @@ const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+console.log("VAPID_PUBLIC_KEY from env:", VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY.substring(0, 20) + "..." : "MISSING");
+console.log("VAPID_PRIVATE_KEY from env:", VAPID_PRIVATE_KEY ? "(set, " + VAPID_PRIVATE_KEY.length + " chars)" : "MISSING");
+
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     "mailto:admin@jugaadjunction.local",
