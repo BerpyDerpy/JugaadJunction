@@ -70,11 +70,12 @@ serve(async (req) => {
       .filter((sub) => !exclude_rollno || sub.roll_number !== exclude_rollno)
       .map(async (sub) => {
         try {
-          await webpush.sendNotification(sub.subscription, notificationPayload);
+          const res = await webpush.sendNotification(sub.subscription, notificationPayload);
+          console.log(`Success ${sub.roll_number}`, res.statusCode)
           sentCount++;
           console.log(`Push sent to ${sub.roll_number}`);
         } catch (err) {
-          console.error(`Failed to send push to ${sub.roll_number}:`, err);
+          console.error(`Failed to send push to ${sub.roll_number}:`, err.statusCode, err.body);
           errors.push({ roll_number: sub.roll_number, error: err.message, stack: err.stack, name: err.name });
           // Clean up expired subscriptions (only remove the specific device endpoint)
           if (err.statusCode === 410 || err.statusCode === 404) {
